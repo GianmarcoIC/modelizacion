@@ -10,6 +10,7 @@ from sklearn.preprocessing import StandardScaler
 SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMjA1OTYwNCwiZXhwIjoyMDQ3NjM1NjA0fQ.PMeZQt5QINtf4xxRZtdfBEvW4tRwQN7QGLVSvQiBz5U"
 
+
 # Crear cliente de Supabase
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
