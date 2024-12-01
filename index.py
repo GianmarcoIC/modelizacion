@@ -31,7 +31,7 @@ def get_data_from_supabase(table_name):
         return pd.DataFrame()
 
 # Interfaz de usuario
-st.title("Análisis de Modelos Predictivos con Supabase")
+st.title("Análisis de Modelos Predictivo")
 data = get_data_from_supabase("modeliza")  # Cambia "modeliza" por el nombre real de la tabla si es necesario
 
 if not data.empty:
