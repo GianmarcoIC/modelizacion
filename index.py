@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 from supabase import create_client
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
@@ -10,7 +9,8 @@ from sklearn.preprocessing import StandardScaler
 # Configuración de Supabase
 SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
-# Crear cliente de Supabase fuera de funciones cacheadas
+
+# Crear cliente de Supabase
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Función para obtener datos de Supabase
@@ -32,7 +32,7 @@ def get_data_from_supabase(table_name):
 
 # Interfaz de usuario
 st.title("Análisis de Modelos Predictivos con Supabase")
-data = get_data_from_supabase("modeliza")
+data = get_data_from_supabase("modeliza")  # Cambia "modeliza" por el nombre real de la tabla si es necesario
 
 if not data.empty:
     st.subheader("Datos Importados de Supabase")
