@@ -245,20 +245,26 @@ st.subheader("Extracción de Datos")
 def extract_data_from_web(url):
     """
     Función para extraer datos de una página web usando BeautifulSoup.
+    Valida si la página contiene una tabla antes de procesar.
     """
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
-        # Ejemplo: Extraer la primera tabla
+        # Validar si hay tablas en la página
         table = soup.find('table')
-        df = pd.read_html(str(table))[0] if table else None
-        return df
+        if table:
+            st.success("Tabla encontrada en la página web.")
+            df = pd.read_html(str(table))[0]
+            return df
+        else:
+            st.error("No se encontraron tablas en la página web proporcionada.")
+            return None
     except Exception as e:
-        st.error(f"Error al extraer datos de la web: {e}")
+        st.error(f"Error al procesar la URL: {e}")
         return None
 
-# URL de ejemplo (cambia por una real)
-url = st.text_input("Ingrese una URL con una tabla de datos:", "https://modelizacion.streamlit.app/")
+# URL de ejemplo con validador
+url = st.text_input("Ingrese una URL con una tabla de datos:", "https://example.com/data")
 data_web = extract_data_from_web(url)
 
 if data_web is not None:
