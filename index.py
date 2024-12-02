@@ -232,10 +232,6 @@ st.pyplot(fig)
 
 
 
-
-
-st.title("Analisis Computacional de Datos")
-
 import streamlit as st
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -262,7 +258,7 @@ def extract_data_from_web(url):
         return None
 
 # URL de ejemplo (cambia por una real)
-url = st.text_input("Ingrese una URL con una tabla de datos:", "https://example.com/data")
+url = st.text_input("Ingrese una URL con una tabla de datos:", "https://modelizacion.streamlit.app/")
 data_web = extract_data_from_web(url)
 
 if data_web is not None:
