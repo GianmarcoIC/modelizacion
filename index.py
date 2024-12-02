@@ -1,25 +1,21 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
+import numpy as np
 
 # Configuración de Supabase
 SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
 
-
-# Crear cliente de Supabase
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Función para obtener datos de Supabase
 @st.cache_data
 def get_data_from_supabase(table_name):
-    """
-    Obtiene datos de una tabla en Supabase.
-    """
     try:
         response = supabase_client.table(table_name).select("*").execute()
         if response.data:
@@ -32,8 +28,8 @@ def get_data_from_supabase(table_name):
         return pd.DataFrame()
 
 # Interfaz de usuario
-st.title("Análisis de Modelos Predictivo")
-data = get_data_from_supabase("variable")  # Cambia "modeliza" por el nombre real de la tabla si es necesario
+st.title("Análisis de Modelos Predictivos")
+data = get_data_from_supabase("variable")  # Cambia "variable" por el nombre real de la tabla.
 
 if not data.empty:
     st.subheader("Datos Importados de Supabase")
@@ -47,7 +43,7 @@ if not data.empty:
     else:
         st.success("No se encontraron valores faltantes.")
 
-    # Escalar datos
+    # Escalado de datos
     features = ["advertising", "discount", "season"]
     target = "sales"
     X = data[features]
@@ -63,25 +59,63 @@ if not data.empty:
     X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
 
     # Modelado
-    st.subheader("Entrenamiento del Modelo")
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
+    st.subheader("Entrenamiento y Evaluación del Modelo")
+
+    # Modelo 1: Regresión Lineal
+    model_lr = LinearRegression()
+    model_lr.fit(X_train, y_train)
+    y_pred_lr = model_lr.predict(X_test)
+
+    # Validación cruzada para regresión lineal
+    cv_scores_lr = cross_val_score(model_lr, X_scaled, y, cv=5, scoring="r2")
+
+    # Modelo 2: Árbol de Decisión
+    model_dt = DecisionTreeRegressor(random_state=42)
+    model_dt.fit(X_train, y_train)
+    y_pred_dt = model_dt.predict(X_test)
+
+    # Validación cruzada para árbol de decisión
+    cv_scores_dt = cross_val_score(model_dt, X_scaled, y, cv=5, scoring="r2")
 
     # Evaluación del modelo
-    st.subheader("Evaluación del Modelo")
-    mae = mean_absolute_error(y_test, y_pred)
-    rmse = mean_squared_error(y_test, y_pred, squared=False)
-    r2 = r2_score(y_test, y_pred)
+    metrics = {
+        "Modelo": ["Regresión Lineal", "Árbol de Decisión"],
+        "MAE": [
+            mean_absolute_error(y_test, y_pred_lr),
+            mean_absolute_error(y_test, y_pred_dt),
+        ],
+        "RMSE": [
+            mean_squared_error(y_test, y_pred_lr, squared=False),
+            mean_squared_error(y_test, y_pred_dt, squared=False),
+        ],
+        "R²": [
+            r2_score(y_test, y_pred_lr),
+            r2_score(y_test, y_pred_dt),
+        ],
+        "R² Validación Cruzada": [
+            np.mean(cv_scores_lr),
+            np.mean(cv_scores_dt),
+        ],
+    }
 
-    st.write(f"**MAE:** {mae:.2f}")
-    st.write(f"**RMSE:** {rmse:.2f}")
-    st.write(f"**R²:** {r2:.2f}")
+    st.write("**Métricas de Evaluación**")
+    st.dataframe(pd.DataFrame(metrics))
 
-    # Resultados de predicción
+    # Comparación de resultados
     st.subheader("Comparación de Resultados")
-    results_df = pd.DataFrame({"Real": y_test, "Predicción": y_pred})
+    results_df = pd.DataFrame({
+        "Real": y_test,
+        "Predicción (Regresión Lineal)": y_pred_lr,
+        "Predicción (Árbol de Decisión)": y_pred_dt,
+    })
     st.dataframe(results_df)
 
+    # Descarga de informe
+    st.download_button(
+        "Descargar Informe",
+        data=results_df.to_csv(index=False),
+        file_name="reporte_modelo.csv",
+        mime="text/csv",
+    )
 else:
     st.error("No se encontraron datos en la tabla o la conexión falló.")
