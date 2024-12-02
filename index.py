@@ -136,6 +136,7 @@ else:
 
 
 st.title("Machine Learning I - IDL1")
+st.title("Machine Learning I - IDL1")
 
 # División de datos (Regresión: variable objetivo 'sales')
 X_regression = data[["advertising", "discount", "season"]]
@@ -170,13 +171,13 @@ st.write(f"MAE: {mae_poly:.2f}, RMSE: {rmse_poly:.2f}, R²: {r2_poly:.2f}")
 
 # Gráfico de dispersión para Regresión Polinómica
 st.write("**Gráfico de Dispersión: Regresión Polinómica**")
-plt.figure(figsize=(8, 6))
-plt.scatter(y_test_reg, y_pred_poly, alpha=0.7, color='purple')
-plt.plot([y_test_reg.min(), y_test_reg.max()], [y_test_reg.min(), y_test_reg.max()], 'k--', lw=2, color='red')
-plt.xlabel("Valores Reales")
-plt.ylabel("Predicciones")
-plt.title("Gráfico de Dispersión para Regresión Polinómica")
-st.pyplot()
+fig, ax = plt.subplots(figsize=(8, 6))
+ax.scatter(y_test_reg, y_pred_poly, alpha=0.7, color='purple')
+ax.plot([y_test_reg.min(), y_test_reg.max()], [y_test_reg.min(), y_test_reg.max()], 'k--', lw=2, color='red')
+ax.set_xlabel("Valores Reales")
+ax.set_ylabel("Predicciones")
+ax.set_title("Gráfico de Dispersión para Regresión Polinómica")
+st.pyplot(fig)
 
 # División de datos (Clasificación: variable objetivo 'season')
 X_classification = data[["advertising", "discount", "sales"]]
@@ -202,8 +203,9 @@ st.text(classification_report(y_test_cls, y_pred_cls_dt))
 # Matriz de confusión para Árbol de Decisión
 conf_matrix_dt = confusion_matrix(y_test_cls, y_pred_cls_dt)
 st.write("**Matriz de Confusión: Árbol de Decisión**")
-sns.heatmap(conf_matrix_dt, annot=True, fmt='d', cmap='Blues')
-st.pyplot()
+fig, ax = plt.subplots()
+sns.heatmap(conf_matrix_dt, annot=True, fmt='d', cmap='Blues', ax=ax)
+st.pyplot(fig)
 
 # Modelo Random Forest
 clf_rf = RandomForestClassifier(random_state=42)
@@ -217,5 +219,6 @@ st.text(classification_report(y_test_cls, y_pred_cls_rf))
 # Matriz de confusión para Random Forest
 conf_matrix_rf = confusion_matrix(y_test_cls, y_pred_cls_rf)
 st.write("**Matriz de Confusión: Random Forest**")
-sns.heatmap(conf_matrix_rf, annot=True, fmt='d', cmap='Greens')
-st.pyplot()
+fig, ax = plt.subplots()
+sns.heatmap(conf_matrix_rf, annot=True, fmt='d', cmap='Greens', ax=ax)
+st.pyplot(fig)
