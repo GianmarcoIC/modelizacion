@@ -135,6 +135,11 @@ else:
 
 
 
+
+
+
+
+
 st.title("Machine Learning I - IDL1")
 
 # División de datos (Regresión: variable objetivo 'sales')
@@ -221,3 +226,106 @@ st.write("**Matriz de Confusión: Random Forest**")
 fig, ax = plt.subplots()
 sns.heatmap(conf_matrix_rf, annot=True, fmt='d', cmap='Greens', ax=ax)
 st.pyplot(fig)
+
+
+
+
+
+
+
+
+st.title("Analisis Computacional de Datos")
+
+import pandas as pd
+from bs4 import BeautifulSoup
+import requests
+
+# Extracción de datos con BeautifulSoup
+def extract_data_from_web(url):
+    """
+    Función para extraer datos de una página web usando BeautifulSoup.
+    """
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    
+    # Ejemplo de extracción de tablas
+    table = soup.find('table')  # Encuentra la primera tabla en la página
+    df = pd.read_html(str(table))[0] if table else None  # Convierte la tabla en un DataFrame
+    return df
+
+# URL de ejemplo
+url = 'https://example.com/data'  # Cambia esto por una URL real con datos
+data_web = extract_data_from_web(url)
+
+# Cargar un archivo CSV adicional
+data_csv = pd.read_csv('data.csv')
+
+# Limpieza de datos
+def clean_data(df):
+    """
+    Función para limpiar datos: manejar valores nulos, duplicados y outliers.
+    """
+    if df is not None:
+        # Manejo de valores nulos
+        df = df.dropna()  # Elimina filas con valores nulos
+        # Eliminar duplicados
+        df = df.drop_duplicates()
+        # Detección y manejo de outliers (usando IQR como ejemplo)
+        Q1 = df.quantile(0.25)
+        Q3 = df.quantile(0.75)
+        IQR = Q3 - Q1
+        df = df[~((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).any(axis=1)]
+        return df
+    else:
+        return None
+
+# Limpiar datos extraídos y cargados
+data_web_cleaned = clean_data(data_web)
+data_csv_cleaned = clean_data(data_csv)
+
+# Integración de datos
+def integrate_data(df1, df2, key=None):
+    """
+    Función para integrar datos de diferentes fuentes.
+    """
+    if key:
+        return pd.merge(df1, df2, on=key)
+    else:
+        return pd.concat([df1, df2], ignore_index=True)
+
+final_dataset = integrate_data(data_web_cleaned, data_csv_cleaned)
+
+# Documentación del proceso
+def generate_report(df, step_name):
+    """
+    Genera un informe detallado del estado de los datos en cada paso.
+    """
+    report = {
+        'Step': step_name,
+        'Shape': df.shape if df is not None else 'No data',
+        'Missing Values': df.isnull().sum().to_dict() if df is not None else 'No data',
+        'Duplicates': df.duplicated().sum() if df is not None else 'No data',
+    }
+    return report
+
+# Generar informes
+report_extraction = generate_report(data_web, 'Extracción de Datos')
+report_cleaning = generate_report(data_web_cleaned, 'Limpieza de Datos')
+report_integration = generate_report(final_dataset, 'Integración de Datos')
+
+# Mostrar informes en consola
+print("Informe de Extracción:", report_extraction)
+print("Informe de Limpieza:", report_cleaning)
+print("Informe de Integración:", report_integration)
+
+# Guardar el conjunto de datos final
+final_dataset.to_csv('final_dataset.csv', index=False)
+
+
+
+
+
+
+
+
+
