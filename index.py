@@ -137,44 +137,85 @@ else:
 
 st.title("Machine Learning I - IDL1")
 
+# División de datos (Regresión: variable objetivo 'sales')
+X_regression = data[["advertising", "discount", "season"]]
+y_regression = data["sales"]
+
+# Escalar las características para regresión
+scaler = StandardScaler()
+X_reg_scaled = scaler.fit_transform(X_regression)
+
+# División de datos para entrenamiento y prueba (Regresión)
+X_train_reg, X_test_reg, y_train_reg, y_test_reg = train_test_split(
+    X_reg_scaled, y_regression, test_size=0.2, random_state=42
+)
+
+# Modelo de Regresión Polinómica
+st.subheader("Regresión Polinómica")
+poly = PolynomialFeatures(degree=2)
+X_train_poly = poly.fit_transform(X_train_reg)
+X_test_poly = poly.transform(X_test_reg)
+
+model_poly = LinearRegression()
+model_poly.fit(X_train_poly, y_train_reg)
+y_pred_poly = model_poly.predict(X_test_poly)
+
+# Métricas para Regresión Polinómica
+mae_poly = mean_absolute_error(y_test_reg, y_pred_poly)
+rmse_poly = mean_squared_error(y_test_reg, y_pred_poly, squared=False)
+r2_poly = r2_score(y_test_reg, y_pred_poly)
+
+st.write("**Métricas de Evaluación: Regresión Polinómica**")
+st.write(f"MAE: {mae_poly:.2f}, RMSE: {rmse_poly:.2f}, R²: {r2_poly:.2f}")
+
+# Gráfico de dispersión para Regresión Polinómica
+st.write("**Gráfico de Dispersión: Regresión Polinómica**")
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test_reg, y_pred_poly, alpha=0.7, color='purple')
+plt.plot([y_test_reg.min(), y_test_reg.max()], [y_test_reg.min(), y_test_reg.max()], 'k--', lw=2, color='red')
+plt.xlabel("Valores Reales")
+plt.ylabel("Predicciones")
+plt.title("Gráfico de Dispersión para Regresión Polinómica")
+st.pyplot()
+
+# División de datos (Clasificación: variable objetivo 'season')
+X_classification = data[["advertising", "discount", "sales"]]
+y_classification = data["season"]
+
+# Escalar las características para clasificación
+X_cls_scaled = scaler.fit_transform(X_classification)
+
+# División de datos para entrenamiento y prueba (Clasificación)
+X_train_cls, X_test_cls, y_train_cls, y_test_cls = train_test_split(
+    X_cls_scaled, y_classification, test_size=0.2, random_state=42
+)
+
+# Modelo Árbol de Decisión
+clf_dt = DecisionTreeClassifier(random_state=42)
+clf_dt.fit(X_train_cls, y_train_cls)
+y_pred_cls_dt = clf_dt.predict(X_test_cls)
+
+st.subheader("Clasificación con Árbol de Decisión")
+st.write("**Reporte de Clasificación: Árbol de Decisión**")
+st.text(classification_report(y_test_cls, y_pred_cls_dt))
+
 # Matriz de confusión para Árbol de Decisión
 conf_matrix_dt = confusion_matrix(y_test_cls, y_pred_cls_dt)
 st.write("**Matriz de Confusión: Árbol de Decisión**")
-fig, ax = plt.subplots()
-sns.heatmap(conf_matrix_dt, annot=True, fmt='d', cmap='Blues', ax=ax)
-st.pyplot(fig)
+sns.heatmap(conf_matrix_dt, annot=True, fmt='d', cmap='Blues')
+st.pyplot()
+
+# Modelo Random Forest
+clf_rf = RandomForestClassifier(random_state=42)
+clf_rf.fit(X_train_cls, y_train_cls)
+y_pred_cls_rf = clf_rf.predict(X_test_cls)
+
+st.subheader("Clasificación con Random Forest")
+st.write("**Reporte de Clasificación: Random Forest**")
+st.text(classification_report(y_test_cls, y_pred_cls_rf))
 
 # Matriz de confusión para Random Forest
 conf_matrix_rf = confusion_matrix(y_test_cls, y_pred_cls_rf)
 st.write("**Matriz de Confusión: Random Forest**")
-fig, ax = plt.subplots()
-sns.heatmap(conf_matrix_rf, annot=True, fmt='d', cmap='Greens', ax=ax)
-st.pyplot(fig)
-
-# Curvas ROC
-fpr_dt, tpr_dt, _ = roc_curve(y_test_cls, clf_dt.predict_proba(X_test_cls)[:, 1])
-fpr_rf, tpr_rf, _ = roc_curve(y_test_cls, clf_rf.predict_proba(X_test_cls)[:, 1])
-roc_auc_dt = auc(fpr_dt, tpr_dt)
-roc_auc_rf = auc(fpr_rf, tpr_rf)
-
-st.write("**Curvas ROC**")
-fig, ax = plt.subplots(figsize=(10, 6))
-ax.plot(fpr_dt, tpr_dt, color='blue', label=f"Árbol de Decisión (AUC = {roc_auc_dt:.2f})")
-ax.plot(fpr_rf, tpr_rf, color='green', label=f"Random Forest (AUC = {roc_auc_rf:.2f})")
-ax.plot([0, 1], [0, 1], color='gray', linestyle='--')
-ax.set_xlabel("Tasa de Falsos Positivos")
-ax.set_ylabel("Tasa de Verdaderos Positivos")
-ax.set_title("Curvas ROC para Modelos de Clasificación")
-ax.legend()
-st.pyplot(fig)
-
-# Gráfico de dispersión para Regresión Polinómica
-st.write("**Gráfico de Dispersión: Regresión Polinómica**")
-fig, ax = plt.subplots(figsize=(10, 6))
-ax.scatter(y_test_reg, y_pred_poly, alpha=0.7, color='purple')
-ax.plot([y_test_reg.min(), y_test_reg.max()], [y_test_reg.min(), y_test_reg.max()], 'k--', lw=2, color='red')
-ax.set_xlabel("Valores Reales")
-ax.set_ylabel("Predicciones")
-ax.set_title("Gráfico de Dispersión para Regresión Polinómica")
-st.pyplot(fig)
-
+sns.heatmap(conf_matrix_rf, annot=True, fmt='d', cmap='Greens')
+st.pyplot()
