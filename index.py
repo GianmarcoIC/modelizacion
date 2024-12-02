@@ -7,6 +7,14 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.metrics import (
+    classification_report, confusion_matrix, roc_curve, auc,
+    mean_absolute_error, mean_squared_error, r2_score
+
 import numpy as np
 
 # Configuración de Supabase
@@ -124,99 +132,86 @@ else:
 
 
 st.title("Machine Learning I - IDL1")
-# Modelo de clasificación: Árbol de Decisión
-st.subheader("Entrenamiento y Evaluación del Modelo de Clasificación")
 
-# Validación de los datos de entrenamiento y prueba
-if len(X_train_cls) != len(y_train_cls):
-    st.error("Las dimensiones de X_train_cls y y_train_cls no coinciden. Verifica los datos.")
-elif X_train_cls.size == 0 or y_train_cls.size == 0:
-    st.error("Los conjuntos de datos de entrenamiento están vacíos.")
-else:
-    # Validación y ajuste de etiquetas (si es necesario)
-    if not np.issubdtype(y_train_cls.dtype, np.integer):
-        from sklearn.preprocessing import LabelEncoder
-        encoder = LabelEncoder()
-        y_train_cls = encoder.fit_transform(y_train_cls)
-        y_test_cls = encoder.transform(y_test_cls)
+# División de datos (Regresión: variable objetivo 'sales')
+X_regression = data[["advertising", "discount", "season"]]
+y_regression = data["sales"]
 
-    # Árbol de Decisión
-    clf_dt = DecisionTreeClassifier(random_state=42)
-    clf_dt.fit(X_train_cls, y_train_cls)
-    y_pred_cls_dt = clf_dt.predict(X_test_cls)
+# Escalar las características para regresión
+scaler = StandardScaler()
+X_reg_scaled = scaler.fit_transform(X_regression)
 
-    # Random Forest
-    clf_rf = RandomForestClassifier(random_state=42)
-    clf_rf.fit(X_train_cls, y_train_cls)
-    y_pred_cls_rf = clf_rf.predict(X_test_cls)
+# División de datos para entrenamiento y prueba (Regresión)
+X_train_reg, X_test_reg, y_train_reg, y_test_reg = train_test_split(
+    X_reg_scaled, y_regression, test_size=0.2, random_state=42
+)
 
-    # Métricas de Clasificación
-    st.write("**Reporte de Clasificación: Árbol de Decisión**")
-    st.text(classification_report(y_test_cls, y_pred_cls_dt))
-
-    st.write("**Reporte de Clasificación: Random Forest**")
-    st.text(classification_report(y_test_cls, y_pred_cls_rf))
-
-    # Matriz de Confusión para Árbol de Decisión
-    conf_matrix_dt = confusion_matrix(y_test_cls, y_pred_cls_dt)
-    st.write("**Matriz de Confusión: Árbol de Decisión**")
-    sns.heatmap(conf_matrix_dt, annot=True, fmt='d', cmap='Blues')
-    st.pyplot()
-
-    # Matriz de Confusión para Random Forest
-    conf_matrix_rf = confusion_matrix(y_test_cls, y_pred_cls_rf)
-    st.write("**Matriz de Confusión: Random Forest**")
-    sns.heatmap(conf_matrix_rf, annot=True, fmt='d', cmap='Greens')
-    st.pyplot()
-
-    # Curvas ROC
-    fpr_dt, tpr_dt, _ = roc_curve(y_test_cls, clf_dt.predict_proba(X_test_cls)[:, 1])
-    fpr_rf, tpr_rf, _ = roc_curve(y_test_cls, clf_rf.predict_proba(X_test_cls)[:, 1])
-    roc_auc_dt = auc(fpr_dt, tpr_dt)
-    roc_auc_rf = auc(fpr_rf, tpr_rf)
-
-    st.write("**Curvas ROC**")
-    plt.figure(figsize=(10, 6))
-    plt.plot(fpr_dt, tpr_dt, color='blue', label=f"Árbol de Decisión (AUC = {roc_auc_dt:.2f})")
-    plt.plot(fpr_rf, tpr_rf, color='green', label=f"Random Forest (AUC = {roc_auc_rf:.2f})")
-    plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
-    plt.xlabel("Tasa de Falsos Positivos")
-    plt.ylabel("Tasa de Verdaderos Positivos")
-    plt.title("Curvas ROC para Modelos de Clasificación")
-    plt.legend()
-    st.pyplot()
-
-# Modelo de regresión polinómica
+# Modelo de Regresión Polinómica
 st.subheader("Regresión Polinómica")
+poly = PolynomialFeatures(degree=2)
+X_train_poly = poly.fit_transform(X_train_reg)
+X_test_poly = poly.transform(X_test_reg)
 
-# Verificación y procesamiento de datos
-try:
-    from sklearn.preprocessing import PolynomialFeatures
-    poly = PolynomialFeatures(degree=2)
-    X_poly = poly.fit_transform(X_scaled)
-    X_train_poly, X_test_poly, y_train_poly, y_test_poly = train_test_split(X_poly, y_regression, test_size=0.2, random_state=42)
+model_poly = LinearRegression()
+model_poly.fit(X_train_poly, y_train_reg)
+y_pred_poly = model_poly.predict(X_test_poly)
 
-    # Entrenamiento del modelo
-    model_poly = LinearRegression()
-    model_poly.fit(X_train_poly, y_train_poly)
-    y_pred_poly = model_poly.predict(X_test_poly)
+# Métricas para Regresión Polinómica
+mae_poly = mean_absolute_error(y_test_reg, y_pred_poly)
+rmse_poly = mean_squared_error(y_test_reg, y_pred_poly, squared=False)
+r2_poly = r2_score(y_test_reg, y_pred_poly)
 
-    # Métricas de Evaluación
-    mae_poly = mean_absolute_error(y_test_poly, y_pred_poly)
-    rmse_poly = mean_squared_error(y_test_poly, y_pred_poly, squared=False)
-    r2_poly = r2_score(y_test_poly, y_pred_poly)
+st.write("**Métricas de Evaluación: Regresión Polinómica**")
+st.write(f"MAE: {mae_poly:.2f}, RMSE: {rmse_poly:.2f}, R²: {r2_poly:.2f}")
 
-    st.write("**Métricas de Evaluación: Regresión Polinómica**")
-    st.write(f"MAE: {mae_poly:.2f}, RMSE: {rmse_poly:.2f}, R²: {r2_poly:.2f}")
+# Gráfico de dispersión para Regresión Polinómica
+st.write("**Gráfico de Dispersión: Regresión Polinómica**")
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test_reg, y_pred_poly, alpha=0.7, color='purple')
+plt.plot([y_test_reg.min(), y_test_reg.max()], [y_test_reg.min(), y_test_reg.max()], 'k--', lw=2, color='red')
+plt.xlabel("Valores Reales")
+plt.ylabel("Predicciones")
+plt.title("Gráfico de Dispersión para Regresión Polinómica")
+st.pyplot()
 
-    # Gráfico de Dispersión
-    st.write("**Gráfico de Dispersión: Regresión Polinómica**")
-    plt.figure(figsize=(10, 6))
-    plt.scatter(y_test_poly, y_pred_poly, alpha=0.7, color='purple')
-    plt.plot([y_test_poly.min(), y_test_poly.max()], [y_test_poly.min(), y_test_poly.max()], 'k--', lw=2, color='red')
-    plt.xlabel("Valores Reales")
-    plt.ylabel("Predicciones")
-    plt.title("Gráfico de Dispersión para Regresión Polinómica")
-    st.pyplot()
-except Exception as e:
-    st.error(f"Error en el modelo de regresión polinómica: {e}")
+# División de datos (Clasificación: variable objetivo 'season')
+X_classification = data[["advertising", "discount", "sales"]]
+y_classification = data["season"]
+
+# Escalar las características para clasificación
+X_cls_scaled = scaler.fit_transform(X_classification)
+
+# División de datos para entrenamiento y prueba (Clasificación)
+X_train_cls, X_test_cls, y_train_cls, y_test_cls = train_test_split(
+    X_cls_scaled, y_classification, test_size=0.2, random_state=42
+)
+
+# Modelo Árbol de Decisión
+clf_dt = DecisionTreeClassifier(random_state=42)
+clf_dt.fit(X_train_cls, y_train_cls)
+y_pred_cls_dt = clf_dt.predict(X_test_cls)
+
+st.subheader("Clasificación con Árbol de Decisión")
+st.write("**Reporte de Clasificación: Árbol de Decisión**")
+st.text(classification_report(y_test_cls, y_pred_cls_dt))
+
+# Matriz de confusión para Árbol de Decisión
+conf_matrix_dt = confusion_matrix(y_test_cls, y_pred_cls_dt)
+st.write("**Matriz de Confusión: Árbol de Decisión**")
+sns.heatmap(conf_matrix_dt, annot=True, fmt='d', cmap='Blues')
+st.pyplot()
+
+# Modelo Random Forest
+clf_rf = RandomForestClassifier(random_state=42)
+clf_rf.fit(X_train_cls, y_train_cls)
+y_pred_cls_rf = clf_rf.predict(X_test_cls)
+
+st.subheader("Clasificación con Random Forest")
+st.write("**Reporte de Clasificación: Random Forest**")
+st.text(classification_report(y_test_cls, y_pred_cls_rf))
+
+# Matriz de confusión para Random Forest
+conf_matrix_rf = confusion_matrix(y_test_cls, y_pred_cls_rf)
+st.write("**Matriz de Confusión: Random Forest**")
+sns.heatmap(conf_matrix_rf, annot=True, fmt='d', cmap='Greens')
+st.pyplot()
