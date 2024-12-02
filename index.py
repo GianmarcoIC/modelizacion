@@ -136,7 +136,6 @@ else:
 
 
 st.title("Machine Learning I - IDL1")
-st.title("Machine Learning I - IDL1")
 
 # División de datos (Regresión: variable objetivo 'sales')
 X_regression = data[["advertising", "discount", "season"]]
