@@ -258,7 +258,7 @@ url = 'https://example.com/data'  # Cambia esto por una URL real con datos
 data_web = extract_data_from_web(url)
 
 # Cargar un archivo CSV adicional
-data_csv = pd.read_csv('data.csv')
+data_csv = pd.read_csv('data_subir.csv')
 
 # Limpieza de datos
 def clean_data(df):
