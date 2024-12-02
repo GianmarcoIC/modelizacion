@@ -236,92 +236,142 @@ st.pyplot(fig)
 
 st.title("Analisis Computacional de Datos")
 
+import streamlit as st
 import pandas as pd
 from bs4 import BeautifulSoup
 import requests
 
+# Título de la aplicación
+st.title("Análisis Computacional de Datos")
+
 # Extracción de datos con BeautifulSoup
+st.subheader("Extracción de Datos")
 def extract_data_from_web(url):
     """
     Función para extraer datos de una página web usando BeautifulSoup.
     """
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    # Ejemplo de extracción de tablas
-    table = soup.find('table')  # Encuentra la primera tabla en la página
-    df = pd.read_html(str(table))[0] if table else None  # Convierte la tabla en un DataFrame
-    return df
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        # Ejemplo: Extraer la primera tabla
+        table = soup.find('table')
+        df = pd.read_html(str(table))[0] if table else None
+        return df
+    except Exception as e:
+        st.error(f"Error al extraer datos de la web: {e}")
+        return None
 
-# URL de ejemplo
-url = 'https://example.com/data'  # Cambia esto por una URL real con datos
+# URL de ejemplo (cambia por una real)
+url = st.text_input("Ingrese una URL con una tabla de datos:", "https://example.com/data")
 data_web = extract_data_from_web(url)
 
-# Cargar un archivo CSV adicional
-data_csv = pd.read_csv('data_subir.csv')
+if data_web is not None:
+    st.write("Datos extraídos de la web:")
+    st.dataframe(data_web)
+else:
+    st.warning("No se pudieron extraer datos desde la URL proporcionada.")
+
+# Cargar archivo CSV adicional
+st.subheader("Carga de Datos desde un Archivo CSV")
+uploaded_file = st.file_uploader("Sube un archivo CSV:", type="csv")
+data_csv = pd.read_csv(uploaded_file) if uploaded_file else None
+
+if data_csv is not None:
+    st.write("Datos cargados desde el archivo CSV:")
+    st.dataframe(data_csv)
 
 # Limpieza de datos
+st.subheader("Limpieza de Datos")
 def clean_data(df):
     """
     Función para limpiar datos: manejar valores nulos, duplicados y outliers.
     """
     if df is not None:
+        st.write(f"**Datos antes de limpieza (filas, columnas): {df.shape}**")
         # Manejo de valores nulos
-        df = df.dropna()  # Elimina filas con valores nulos
+        df = df.dropna()
+        st.write(f"**Filas restantes después de eliminar valores nulos: {df.shape[0]}**")
+        
         # Eliminar duplicados
+        initial_rows = df.shape[0]
         df = df.drop_duplicates()
-        # Detección y manejo de outliers (usando IQR como ejemplo)
+        st.write(f"**Duplicados eliminados: {initial_rows - df.shape[0]}**")
+        
+        # Manejo de outliers (IQR)
         Q1 = df.quantile(0.25)
         Q3 = df.quantile(0.75)
         IQR = Q3 - Q1
-        df = df[~((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).any(axis=1)]
+        outliers = ((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).any(axis=1)
+        st.write(f"**Outliers detectados: {outliers.sum()}**")
+        df = df[~outliers]
+        st.write(f"**Datos después de limpieza (filas, columnas): {df.shape}**")
         return df
     else:
+        st.warning("No hay datos para limpiar.")
         return None
 
-# Limpiar datos extraídos y cargados
 data_web_cleaned = clean_data(data_web)
 data_csv_cleaned = clean_data(data_csv)
 
 # Integración de datos
+st.subheader("Integración de Datos")
 def integrate_data(df1, df2, key=None):
     """
     Función para integrar datos de diferentes fuentes.
     """
-    if key:
-        return pd.merge(df1, df2, on=key)
+    if df1 is not None and df2 is not None:
+        if key:
+            integrated_df = pd.merge(df1, df2, on=key)
+            st.write(f"**Datos integrados utilizando clave '{key}': {integrated_df.shape}**")
+        else:
+            integrated_df = pd.concat([df1, df2], ignore_index=True)
+            st.write(f"**Datos integrados (filas, columnas): {integrated_df.shape}**")
+        return integrated_df
     else:
-        return pd.concat([df1, df2], ignore_index=True)
+        st.warning("No se pueden integrar los datos: faltan fuentes.")
+        return None
 
 final_dataset = integrate_data(data_web_cleaned, data_csv_cleaned)
 
 # Documentación del proceso
+st.subheader("Documentación del Proceso")
 def generate_report(df, step_name):
     """
     Genera un informe detallado del estado de los datos en cada paso.
     """
-    report = {
-        'Step': step_name,
-        'Shape': df.shape if df is not None else 'No data',
-        'Missing Values': df.isnull().sum().to_dict() if df is not None else 'No data',
-        'Duplicates': df.duplicated().sum() if df is not None else 'No data',
-    }
+    if df is not None:
+        report = {
+            'Paso': step_name,
+            'Filas y Columnas': df.shape,
+            'Valores Nulos': df.isnull().sum().to_dict(),
+            'Duplicados': df.duplicated().sum(),
+        }
+    else:
+        report = {'Paso': step_name, 'Estado': 'Sin datos'}
     return report
 
-# Generar informes
-report_extraction = generate_report(data_web, 'Extracción de Datos')
-report_cleaning = generate_report(data_web_cleaned, 'Limpieza de Datos')
-report_integration = generate_report(final_dataset, 'Integración de Datos')
+# Informes
+report_extraction = generate_report(data_web, "Extracción de Datos")
+report_cleaning_web = generate_report(data_web_cleaned, "Limpieza de Datos Web")
+report_cleaning_csv = generate_report(data_csv_cleaned, "Limpieza de Datos CSV")
+report_integration = generate_report(final_dataset, "Integración de Datos")
 
-# Mostrar informes en consola
-print("Informe de Extracción:", report_extraction)
-print("Informe de Limpieza:", report_cleaning)
-print("Informe de Integración:", report_integration)
+# Mostrar informes
+st.write("**Informe de Extracción:**", report_extraction)
+st.write("**Informe de Limpieza de Datos Web:**", report_cleaning_web)
+st.write("**Informe de Limpieza de Datos CSV:**", report_cleaning_csv)
+st.write("**Informe de Integración:**", report_integration)
 
 # Guardar el conjunto de datos final
-final_dataset.to_csv('final_dataset.csv', index=False)
-
-
+if final_dataset is not None:
+    st.subheader("Descarga del Conjunto de Datos Final")
+    csv_data = final_dataset.to_csv(index=False)
+    st.download_button(
+        label="Descargar Dataset Final",
+        data=csv_data,
+        file_name="final_dataset.csv",
+        mime="text/csv"
+    )
 
 
 
