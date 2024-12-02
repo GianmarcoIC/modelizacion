@@ -258,7 +258,7 @@ def extract_data_from_web(url):
         return None
 
 # URL de ejemplo (cambia por una real)
-url = st.text_input("Ingrese una URL con una tabla de datos:", "https://drive.google.com/file/d/1UPT913FTKIXiLTDCNE9WeZ_tC31l8mtH/view?usp=sharing")
+url = st.text_input("Ingrese una URL con una tabla de datos:", "https://modelizacion.streamlit.app/")
 data_web = extract_data_from_web(url)
 
 if data_web is not None:
