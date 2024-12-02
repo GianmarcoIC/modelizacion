@@ -6,15 +6,15 @@ from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
-from sklearn.tree import DecisionTreeClassifier
 
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.metrics import (
     classification_report, confusion_matrix, roc_curve, auc,
     mean_absolute_error, mean_squared_error, r2_score
-
+)
 import numpy as np
 
 # Configuración de Supabase
