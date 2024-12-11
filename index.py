@@ -22,7 +22,7 @@ import numpy as np
 
 # Configuración de Supabase
 SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMjA1OTYwNCwiZXhwIjoyMDQ3NjM1NjA0fQ.PMeZQt5QINtf4xxRZtdfBEvW4tRwQN7QGLVSvQiBz5U"
 
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
