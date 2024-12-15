@@ -9,3 +9,4 @@ tensorflow
 seaborn
 bs4
 keras
+matplotlib
