@@ -166,9 +166,42 @@ if not data.empty:
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
-       
-
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
-        
+
+
+# Random Forest
+st.header("Predicción con Random Forest")
+if not data.empty:
+    try:
+        # Modelo Random Forest
+        modelo_rf = RandomForestRegressor(n_estimators=100, random_state=42)
+        modelo_rf.fit(X_train, y_train.ravel())
+
+        # Predicción con Random Forest
+        predicciones_rf_normalizadas = modelo_rf.predict(años_normalizados)
+        predicciones_rf = scaler_y.inverse_transform(predicciones_rf_normalizadas.reshape(-1, 1))
+
+        predicciones_rf_df = pd.DataFrame({
+            "Año": años_prediccion,
+            "Predicción_RF": predicciones_rf.flatten()
+        })
+
+        st.write("Tabla de predicciones Random Forest:")
+        st.dataframe(predicciones_rf_df)
+
+        # Gráfico de predicciones Random Forest
+        fig_rf = px.line(predicciones_rf_df, x="Año", y="Predicción_RF",
+                         title="Predicciones Random Forest",
+                         labels={"Predicción_RF": "Cantidad de Artículos"})
+        st.plotly_chart(fig_rf)
+
+        # Error del modelo Random Forest
+        errores_rf = mean_squared_error(y_test, modelo_rf.predict(X_test))
+        st.write(f"Error cuadrático medio Random Forest (MSE): {errores_rf:.4f}")
+
+    except Exception as e:
+        st.error(f"Error en el modelo Random Forest: {e}")
+
+
     
