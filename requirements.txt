@@ -8,3 +8,4 @@ graphviz
 tensorflow
 seaborn
 bs4
+keras
