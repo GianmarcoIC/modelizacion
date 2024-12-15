@@ -16,7 +16,7 @@ SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Z21jdG51bGRuZ3psdWRnZXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM4ODQ4NjMsImV4cCI6MjA0OTQ2MDg2M30.T5LUIZCZA45OxtjTV2X9Ib6htozrrRdaKIjwgK1dsmg"
 
 st.image("log_ic-removebg-preview.png", width=200)
-st.title("Modelo Predictivo - Red Neuronal 2024")
+st.title("Modelo Predictivo - Red Neuronal")
 
 # Crear cliente Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -166,24 +166,39 @@ if not data.empty:
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
-        # Modelo predictivo con árbol de decisiones
-        st.title("Modelo de Predicción - Árbol de Decisiones")
+        # Preprocesamiento de datos
+        data = get_table_data("articulo")
+        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
+        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
+        X = datos_modelo[['anio_publicacion']]
+        y = datos_modelo['cantidad_articulos']
+        
+        # Escalado de datos
+        scaler_X = MinMaxScaler()
+        X_scaled = scaler_X.fit_transform(X)
+        
+        # División de los datos
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        # Modelo de árbol de decisión
         modelo_arbol = DecisionTreeRegressor(random_state=42)
-        modelo_arbol.fit(X, y)
-        predicciones_arbol = modelo_arbol.predict(X)
-
-        # Tabla de predicciones del árbol
-        arbol_df = pd.DataFrame({
-            "Año": X.values.flatten(),
-            "Predicción (Árbol)": predicciones_arbol
-        })
-        st.write("Predicciones del Árbol de Decisiones:")
-        st.dataframe(arbol_df)
-
+        modelo_arbol.fit(X_train, y_train)
+        
+        # Predicción
+        y_pred_arbol = modelo_arbol.predict(X_test)
+        
         # Visualización del árbol
         st.subheader("Árbol de Decisión - Estructura")
-        arbol_texto = export_text(modelo_arbol, feature_names=["anio_publicacion"])
+        fig, ax = plt.subplots(figsize=(12, 8))
+        plot_tree(modelo_arbol, feature_names=['anio_publicacion'], filled=True, rounded=True, fontsize=10, ax=ax)
+        st.pyplot(fig)
+        
+        # Exportar estructura del árbol como texto
+        arbol_texto = export_text(modelo_arbol, feature_names=['anio_publicacion'])
+        st.text("Estructura del árbol de decisión:")
         st.text(arbol_texto)
+        
+        # Error del modelo
+        mse_arbol = mean_squared_error(y_test, y_pred_arbol)
+        st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
 
-    except Exception as e:
-        st.error(f"Error en el modelo: {e}")
