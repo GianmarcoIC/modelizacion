@@ -223,18 +223,5 @@ try:
         plt.grid()
         st.pyplot(plt.gcf())
 
-        # Métrica del modelo
-                mse_arbol = mean_squared_error(y, predicciones_arbol)
-                st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
-        
-        except Exception as e:
-            st.error(f"Error en el modelo de Árbol de Decisión: {e}")
-        
-        # Conclusión
-        st.title("Conclusiones")
-        st.markdown("""
-        - La Red Neuronal mostró predicciones más detalladas al capturar relaciones no lineales en los datos.
-        - El Árbol de Decisión es más interpretativo y permite visualizar la lógica utilizada en las predicciones.
-        - Ambos modelos pueden ser útiles dependiendo del contexto: precisión frente a interpretabilidad.
-        """)
+       
 
