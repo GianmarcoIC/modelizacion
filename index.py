@@ -77,25 +77,8 @@ if not data.empty:
         st.write("Tabla de predicciones:")
         st.dataframe(predicciones_df)
 
-        # Gráfico combinado: Histórico, predicciones y tendencia
-        historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
-        historico_df["Tipo"] = "Histórico"
-        predicciones_df["Tipo"] = "Predicción"
-        grafico_df = pd.concat([historico_df, predicciones_df.rename(columns={"Predicción": "Cantidad de Artículos"})])
-
-        fig = px.bar(
-            grafico_df,
-            x="Año",
-            y="Cantidad de Artículos",
-            color="Tipo",
-            title="Publicaciones Históricas, Predicciones y Tendencia",
-            barmode="group"
-        )
-        fig.add_scatter(x=predicciones_df["Año"], y=predicciones_df["Predicción"], mode="lines+markers", name="Tendencia")
-        st.plotly_chart(fig)
-
-        # Visualización de red neuronal
-        st.subheader("Red Neuronal - Arquitectura")
+        # Visualización de red neuronal con valores
+        st.subheader("Red Neuronal - Arquitectura y Predicciones")
         nn_graph = Digraph(format="png")
         nn_graph.attr(rankdir="LR")
 
@@ -104,7 +87,7 @@ if not data.empty:
             nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i}", shape="circle", style="filled", color="lightgreen")
         for i in range(1, 33):
             nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i}", shape="circle", style="filled", color="lightyellow")
-        nn_graph.node("Output", "Predicción", shape="circle", style="filled", color="orange")
+        nn_graph.node("Output", "Predicción\n(Valores)", shape="circle", style="filled", color="orange")
 
         nn_graph.edge("Input", "Hidden1_1")
         for i in range(1, 65):
@@ -112,6 +95,8 @@ if not data.empty:
                 nn_graph.edge(f"Hidden1_{i}", f"Hidden2_{j}")
         for i in range(1, 33):
             nn_graph.edge(f"Hidden2_{i}", "Output")
+
+        nn_graph.node("Output", f"Predicción\n{', '.join([str(round(val, 2)) for val in predicciones.flatten()])}", shape="circle", style="filled", color="orange")
 
         st.graphviz_chart(nn_graph)
 
@@ -133,10 +118,14 @@ if not data.empty:
         st.write("Predicciones del Árbol de Decisiones:")
         st.dataframe(arbol_df)
 
-        # Visualización del árbol
-        st.subheader("Árbol de Decisión - Estructura")
-        arbol_texto = export_text(modelo_arbol, feature_names=["Año"])
-        st.text(arbol_texto)
+        # Tabla comparativa de modelos
+        comparacion_df = pd.DataFrame({
+            "Año": años_prediccion,
+            "Predicción NN": predicciones.flatten(),
+            "Predicción Árbol": modelo_arbol.predict(pd.DataFrame(años_prediccion))
+        })
+        st.write("Comparación de modelos predictivos:")
+        st.dataframe(comparacion_df)
 
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
