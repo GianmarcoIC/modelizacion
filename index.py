@@ -167,7 +167,22 @@ if not data.empty:
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
         # Modelo predictivo con árbol de decisiones
-        st.title("Modelo de Predicción - Árbol de Decisiones")
+st.title("Modelo de Predicción - Árbol de Decisiones")
+
+try:
+    # Obtener datos actualizados en tiempo real
+    data = get_table_data("articulo")
+    data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
+    datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
+
+    # Verificación de datos
+    if datos_modelo.empty:
+        st.warning("No hay datos suficientes para construir el modelo.")
+    else:
+        X = datos_modelo[['anio_publicacion']]
+        y = datos_modelo['cantidad_articulos']
+
+        # Entrenamiento del modelo
         modelo_arbol = DecisionTreeRegressor(random_state=42)
         modelo_arbol.fit(X, y)
         predicciones_arbol = modelo_arbol.predict(X)
@@ -175,17 +190,41 @@ if not data.empty:
         # Tabla de predicciones del árbol
         arbol_df = pd.DataFrame({
             "Año": X.values.flatten(),
+            "Cantidad Real": y,
             "Predicción (Árbol)": predicciones_arbol
         })
         st.write("Predicciones del Árbol de Decisiones:")
         st.dataframe(arbol_df)
 
-        # Visualización del árbol
+        # Visualización del árbol de decisión
         st.subheader("Árbol de Decisión - Estructura")
+        fig, ax = plt.subplots(figsize=(12, 8))
+        plot_tree(modelo_arbol, feature_names=["anio_publicacion"], filled=True, rounded=True, fontsize=10, ax=ax)
+        st.pyplot(fig)
+
+        # Exportar estructura textual del árbol
         arbol_texto = export_text(modelo_arbol, feature_names=["anio_publicacion"])
+        st.text("Estructura del árbol de decisión:")
         st.text(arbol_texto)
 
-    except Exception as e:
-        st.error(f"Error en el modelo: {e}")
+        # Gráfico comparativo
+        st.subheader("Gráfico Comparativo de Predicciones")
+        plt.figure(figsize=(10, 6))
+        plt.plot(X, y, label="Cantidad Real", marker="o", linestyle="--", color="blue")
+        plt.plot(X, predicciones_arbol, label="Predicción (Árbol)", marker="x", linestyle="-", color="red")
+        plt.xlabel("Año de Publicación")
+        plt.ylabel("Cantidad de Artículos")
+        plt.title("Comparación entre Datos Reales y Predicciones")
+        plt.legend()
+        plt.grid()
+        st.pyplot(plt.gcf())
+
+        # Métrica del modelo
+        mse_arbol = mean_squared_error(y, predicciones_arbol)
+        st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
+
+except Exception as e:
+    st.error(f"Error en el modelo: {e}")
+
         
     
