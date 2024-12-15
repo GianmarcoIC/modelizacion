@@ -223,5 +223,19 @@ try:
         plt.grid()
         st.pyplot(plt.gcf())
 
-       
+               # Métrica del modelo
+        mse_arbol = mean_squared_error(y, predicciones_arbol)
+        st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
+
+except Exception as e:
+    st.error(f"Error en el modelo de Árbol de Decisión: {e}")
+
+# Conclusiones
+st.title("Conclusiones")
+st.markdown("""
+- **Red Neuronal:** Captura relaciones no lineales complejas en los datos, ideal para predicciones detalladas.
+- **Árbol de Decisión:** Fácil de interpretar, muestra claramente las reglas usadas para predecir.
+- La elección del modelo depende del equilibrio necesario entre precisión y explicabilidad.
+""")
+
 
