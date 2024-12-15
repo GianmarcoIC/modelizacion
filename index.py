@@ -9,13 +9,23 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 
-# Configuración de Supabase
+# Configuración Supabase
 SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Z21jdG51bGRuZ3psdWRnZXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM4ODQ4NjMsImV4cCI6MjA0OTQ2MDg2M30.T5LUIZCZA45OxtjTV2X9Ib6htozrrRdaKIjwgK1dsmg"
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-st.image("https://upload.wikimedia.org/wikipedia/commons/4/45/Logo_de_Streamlit.png", width=150)
+st.image("log_ic-removebg-preview.png", width=200)
 st.title("Modelo Predictivo - Red Neuronal 2024")
+
+# Crear cliente Supabase
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    st.error(f"Error al conectar con Supabase: {e}")
+
+# Opción para predecir años
+st.sidebar.title("Configuración de Predicción")
+inicio_prediccion = st.sidebar.number_input("Año inicial de predicción", value=2024, step=1)
+fin_prediccion = st.sidebar.number_input("Año final de predicción", value=2026, step=1)
 
 # Función para obtener datos de una tabla
 def get_table_data(table_name):
@@ -117,7 +127,7 @@ if not data.empty:
         modelo_nn.fit(X_train, y_train, epochs=100, verbose=0)
 
         # Predicción
-        años_prediccion = list(range(2024, 2026 + 1))
+        años_prediccion = list(range(inicio_prediccion, fin_prediccion + 1))
         años_normalizados = (pd.DataFrame(años_prediccion) - X.min().values[0]) / (X.max().values[0] - X.min().values[0])
         predicciones = modelo_nn.predict(años_normalizados)
 
@@ -129,22 +139,57 @@ if not data.empty:
         st.write("Tabla de predicciones:")
         st.dataframe(predicciones_df)
 
-        # Gráfico combinado: Histórico y predicciones
-        historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
-        historico_df["Tipo"] = "Histórico"
-        predicciones_df["Tipo"] = "Predicción"
-        grafico_df = pd.concat([historico_df, predicciones_df.rename(columns={"Predicción": "Cantidad de Artículos"})])
+        # Visualización de red neuronal
+        st.subheader("Red Neuronal con Valores")
+        nn_graph = Digraph(format="png")
+        nn_graph.attr(rankdir="LR")
 
-        # Crear el gráfico de barras
-        fig = px.bar(
-            grafico_df,
-            x="Año",
-            y="Cantidad de Artículos",
-            color="Tipo",
-            title="Publicaciones Históricas y Predicciones",
-            labels={"Año": "Año", "Cantidad de Artículos": "Cantidad de Artículos", "Tipo": "Datos"},
-            barmode="group"
-        )
-        st.plotly_chart(fig)
+        nn_graph.node("Input", f"Año [{X.mean().values[0]:.2f}]", shape="circle", style="filled", color="lightblue")
+        for i in range(1, 6):
+            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i} [{modelo_nn.get_weights()[0][0][i-1]:.2f}]", shape="circle", style="filled", color="lightgreen")
+        for i in range(1, 6):
+            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i} [{modelo_nn.get_weights()[2][0][i-1]:.2f}]", shape="circle", style="filled", color="lightgreen")
+        nn_graph.node("Output", f"Predicción [{predicciones_df['Predicción'].mean():.2f}]", shape="circle", style="filled", color="orange")
+
+        nn_graph.edge("Input", "Hidden1_1")
+        for i in range(1, 6):
+            for j in range(1, 6):
+                nn_graph.edge(f"Hidden1_{i}", f"Hidden2_{j}")
+        for i in range(1, 6):
+            nn_graph.edge(f"Hidden2_{i}", "Output")
+
+        st.graphviz_chart(nn_graph)
+
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
+# Gráfico combinado: Histórico y predicciones
+data = get_table_data("articulo")
+if not data.empty:
+    try:
+        # Agrupar datos históricos
+        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
+        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
+
+        # Crear DataFrame de predicciones si existen
+        if 'predicciones_df' in locals():
+            historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
+            historico_df["Tipo"] = "Histórico"
+            predicciones_df["Tipo"] = "Predicción"
+            grafico_df = pd.concat([historico_df, predicciones_df.rename(columns={"Predicción": "Cantidad de Artículos"})])
+
+            # Crear el gráfico de barras
+            fig = px.bar(
+                grafico_df,
+                x="Año",
+                y="Cantidad de Artículos",
+                color="Tipo",
+                title="Publicaciones Históricas y Predicciones",
+                labels={"Año": "Año", "Cantidad de Artículos": "Cantidad de Artículos", "Tipo": "Datos"},
+                barmode="group"
+            )
+            st.plotly_chart(fig)
+        else:
+            st.warning("No se encontraron predicciones para visualizar.")
+
+    except Exception as e:
+        st.error(f"Error al generar el gráfico de barras: {e}")
