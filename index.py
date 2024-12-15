@@ -10,11 +10,11 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 
 # Configuración Supabase
-SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
+SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Z21jdG51bGRuZ3psdWRnZXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM4ODQ4NjMsImV4cCI6MjA0OTQ2MDg2M30.T5LUIZCZA45OxtjTV2X9Ib6htozrrRdaKIjwgK1dsmg"
 
 st.image("log_ic-removebg-preview.png", width=200)
-st.title("CRUD y Modelo Predictivo Mejorado con Rango de Predicción")
+st.title("Modelo Predictivo - Red Neuronal 2024")
 
 # Crear cliente Supabase
 try:
@@ -162,3 +162,34 @@ if not data.empty:
 
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
+# Gráfico combinado: Histórico y predicciones
+data = get_table_data("articulo")
+if not data.empty:
+    try:
+        # Agrupar datos históricos
+        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
+        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
+
+        # Crear DataFrame de predicciones si existen
+        if 'predicciones_df' in locals():
+            historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
+            historico_df["Tipo"] = "Histórico"
+            predicciones_df["Tipo"] = "Predicción"
+            grafico_df = pd.concat([historico_df, predicciones_df.rename(columns={"Predicción": "Cantidad de Artículos"})])
+
+            # Crear el gráfico de barras
+            fig = px.bar(
+                grafico_df,
+                x="Año",
+                y="Cantidad de Artículos",
+                color="Tipo",
+                title="Publicaciones Históricas y Predicciones",
+                labels={"Año": "Año", "Cantidad de Artículos": "Cantidad de Artículos", "Tipo": "Datos"},
+                barmode="group"
+            )
+            st.plotly_chart(fig)
+        else:
+            st.warning("No se encontraron predicciones para visualizar.")
+
+    except Exception as e:
+        st.error(f"Error al generar el gráfico de barras: {e}")
