@@ -167,9 +167,9 @@ if not data.empty:
         # Error del modelo
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
-
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
+
 
 # Modelo predictivo con Random Forest
 st.title("Modelo de Predicción - Random Forest Mejorado")
@@ -183,12 +183,10 @@ try:
     if datos_modelo.empty:
         st.warning("No hay datos suficientes para construir el modelo.")
     else:
-        # Configuración de predicción
+        # Configuración de predicción desde la barra lateral
         st.sidebar.header("Configuración de Predicción")
-        anio_min = int(datos_modelo['anio_publicacion'].min())
-        anio_max = int(datos_modelo['anio_publicacion'].max())
-        anio_inicial = st.sidebar.number_input("Año inicial de predicción", min_value=anio_min, max_value=anio_max+10, value=anio_max+1)
-        anio_final = st.sidebar.number_input("Año final de predicción", min_value=anio_inicial, max_value=anio_max+20, value=anio_max+5)
+        inicio_prediccion = st.sidebar.number_input("Año inicial de predicción", value=2024, step=1)
+        fin_prediccion = st.sidebar.number_input("Año final de predicción", value=2026, step=1)
 
         # Escalamiento de datos
         scaler_X_rf = MinMaxScaler()
@@ -205,15 +203,16 @@ try:
         modelo_rf = RandomForestRegressor(random_state=42, n_estimators=100)
         modelo_rf.fit(X_train, y_train.ravel())
 
-        # Predicción para el rango personalizado
-        X_prediccion = pd.DataFrame({"anio_publicacion": range(anio_inicial, anio_final + 1)})
+        # Predicción para el rango especificado en la barra lateral
+        años_prediccion = list(range(inicio_prediccion, fin_prediccion + 1))
+        X_prediccion = pd.DataFrame({"anio_publicacion": años_prediccion})
         X_pred_scaled = scaler_X_rf.transform(X_prediccion)
         pred_scaled = modelo_rf.predict(X_pred_scaled)
         predicciones_rango = scaler_y_rf.inverse_transform(pred_scaled.reshape(-1, 1)).flatten()
 
         # Tabla de predicciones
         tabla_predicciones = pd.DataFrame({
-            "Año": X_prediccion['anio_publicacion'],
+            "Año": años_prediccion,
             "Predicción (Random Forest)": predicciones_rango
         })
         st.write("Predicciones del Modelo Random Forest Mejorado:")
@@ -238,4 +237,3 @@ try:
 
 except Exception as e:
     st.error(f"Error en el modelo Random Forest: {e}")
-
