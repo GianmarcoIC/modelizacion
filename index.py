@@ -199,15 +199,23 @@ if not data.empty:
         predicciones_rf_normalizadas = modelo_rf.predict(años_normalizados)
         predicciones_rf = scaler_y.inverse_transform(predicciones_rf_normalizadas.reshape(-1, 1))
 
+        # Calcular varianza de confiabilidad
+        estimadores = modelo_rf.estimators_
+        predicciones_estimadores = np.array([est.predict(años_normalizados) for est in estimadores])
+        desviacion_std = np.std(predicciones_estimadores, axis=0)
+        intervalo_confianza = 1.96 * desviacion_std  # Para el 95% de confianza
+
         predicciones_rf_df = pd.DataFrame({
             "Año": años_prediccion,
-            "Predicción": predicciones_rf.flatten()
+            "Predicción": predicciones_rf.flatten(),
+            "Límite Inferior": (predicciones_rf.flatten() - intervalo_confianza).clip(min=0),
+            "Límite Superior": predicciones_rf.flatten() + intervalo_confianza
         })
 
-        st.write("Tabla de predicciones Random Forest:")
+        st.write("Tabla de predicciones Random Forest con intervalo de confianza del 95%:")
         st.dataframe(predicciones_rf_df)
 
-        # Gráfico combinado: Histórico, predicciones y tendencia
+        # Gráfico combinado: Histórico, predicciones y tendencia con intervalo de confianza
         historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
         historico_df["Tipo"] = "Histórico"
         predicciones_rf_df["Tipo"] = "Predicción"
@@ -218,10 +226,30 @@ if not data.empty:
             x="Año",
             y="Cantidad de Artículos",
             color="Tipo",
-            title="Publicaciones Históricas, Predicciones y Tendencia",
+            title="Publicaciones Históricas, Predicciones y Tendencia con Intervalo de Confianza",
             barmode="group"
         )
-        fig_rf.add_scatter(x=predicciones_rf_df["Año"], y=predicciones_rf_df["Predicción"], mode="lines+markers", name="Tendencia")
+        fig_rf.add_scatter(
+            x=predicciones_rf_df["Año"],
+            y=predicciones_rf_df["Predicción"],
+            mode="lines+markers",
+            name="Tendencia"
+        )
+        fig_rf.add_scatter(
+            x=predicciones_rf_df["Año"],
+            y=predicciones_rf_df["Límite Inferior"],
+            mode="lines",
+            line=dict(dash="dash", color="red"),
+            name="Límite Inferior"
+        )
+        fig_rf.add_scatter(
+            x=predicciones_rf_df["Año"],
+            y=predicciones_rf_df["Límite Superior"],
+            mode="lines",
+            line=dict(dash="dash", color="green"),
+            name="Límite Superior"
+        )
+
         st.plotly_chart(fig_rf)
 
         # Error del modelo Random Forest
