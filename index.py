@@ -166,6 +166,29 @@ if not data.empty:
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
+        # Modelo predictivo con árbol de decisiones
+        st.title("Modelo de Predicción - Árbol de Decisiones")
+        modelo_arbol = DecisionTreeRegressor(random_state=42)
+        modelo_arbol.fit(X, y)
+        predicciones_arbol = modelo_arbol.predict(X)
+
+        # Tabla de predicciones del árbol
+        arbol_df = pd.DataFrame({
+            "Año": X.values.flatten(),
+            "Predicción (Árbol)": predicciones_arbol
+        })
+        st.write("Predicciones del Árbol de Decisiones:")
+        st.dataframe(arbol_df)
+
+        # Visualización del árbol
+        st.subheader("Árbol de Decisión - Estructura")
+        arbol_texto = export_text(modelo_arbol, feature_names=["anio_publicacion"])
+        st.text(arbol_texto)
+
+    except Exception as e:
+        st.error(f"Error en el modelo: {e}")
+        
+    
 # Random Forest
 st.header("Predicción con Random Forest")
 if not data.empty:
