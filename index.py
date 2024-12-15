@@ -166,7 +166,7 @@ if not data.empty:
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
-       # Modelo predictivo con árbol de decisiones
+    # Modelo predictivo con árbol de decisiones
 st.title("Modelo de Predicción - Árbol de Decisiones")
 
 try:
@@ -220,6 +220,7 @@ try:
         st.pyplot(plt.gcf())
 
         # Métrica del modelo
+        from sklearn.metrics import mean_squared_error
         mse_arbol = mean_squared_error(y, predicciones_arbol)
         st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
 
