@@ -5,6 +5,7 @@ from supabase import create_client, Client
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
+from sklearn.tree import DecisionTreeRegressor, export_text
 from graphviz import Digraph
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -20,7 +21,7 @@ st.title("Modelo Predictivo - Red Neuronal 2024")
 # Crear cliente Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Opción para predecir años
+# Opciones para predicción
 st.sidebar.title("Configuración de Predicción")
 inicio_prediccion = st.sidebar.number_input("Año inicial de predicción", value=2024, step=1)
 fin_prediccion = st.sidebar.number_input("Año final de predicción", value=2026, step=1)
@@ -123,7 +124,6 @@ if not data.empty:
         st.write("Tabla de predicciones:")
         st.dataframe(predicciones_df)
 
-
         # Gráfico combinado: Histórico, predicciones y tendencia
         historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
         historico_df["Tipo"] = "Histórico"
@@ -174,7 +174,7 @@ if not data.empty:
 
         # Tabla de predicciones del árbol
         arbol_df = pd.DataFrame({
-            "Año": X.flatten(),
+            "Año": X.values.flatten(),
             "Predicción (Árbol)": predicciones_arbol
         })
         st.write("Predicciones del Árbol de Decisiones:")
@@ -182,32 +182,8 @@ if not data.empty:
 
         # Visualización del árbol
         st.subheader("Árbol de Decisión - Estructura")
-        arbol_texto = export_text(modelo_arbol, feature_names=["Año"])
+        arbol_texto = export_text(modelo_arbol, feature_names=["anio_publicacion"])
         st.text(arbol_texto)
 
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
-
-
-        # Modelo predictivo con árbol de decisiones
-        st.title("Modelo de Predicción - Árbol de Decisiones")
-        modelo_arbol = DecisionTreeRegressor(random_state=42)
-        modelo_arbol.fit(X, y)
-        predicciones_arbol = modelo_arbol.predict(X)
-
-        # Tabla de predicciones del árbol
-        arbol_df = pd.DataFrame({
-            "Año": X.flatten(),
-            "Predicción (Árbol)": predicciones_arbol
-        })
-        st.write("Predicciones del Árbol de Decisiones:")
-        st.dataframe(arbol_df)
-
-        # Visualización del árbol
-        st.subheader("Árbol de Decisión - Estructura")
-        arbol_texto = export_text(modelo_arbol, feature_names=["Año"])
-        st.text(arbol_texto)
-
-    except Exception as e:
-        st.error(f"Error en el modelo: {e}")
-
