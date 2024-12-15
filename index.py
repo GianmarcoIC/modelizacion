@@ -8,6 +8,7 @@ from sklearn.metrics import mean_squared_error
 from supabase import create_client
 from graphviz import Digraph
 
+
 # Configuración Supabase
 SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Z21jdG51bGRuZ3psdWRnZXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM4ODQ4NjMsImV4cCI6MjA0OTQ2MDg2M30.T5LUIZCZA45OxtjTV2X9Ib6htozrrRdaKIjwgK1dsmg"
