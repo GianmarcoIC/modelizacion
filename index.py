@@ -173,28 +173,55 @@ if not data.empty:
 
 # Random Forest
 st.header("Predicción con Random Forest")
+data = get_table_data("articulo")
 if not data.empty:
     try:
+        # Preprocesamiento de datos
+        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
+        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
+        X = datos_modelo[['anio_publicacion']]
+        y = datos_modelo['cantidad_articulos']
+
+        scaler_X = MinMaxScaler()
+        scaler_y = MinMaxScaler()
+        X_normalized = scaler_X.fit_transform(X)
+        y_normalized = scaler_y.fit_transform(y.values.reshape(-1, 1))
+
+        X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
+
         # Modelo Random Forest
         modelo_rf = RandomForestRegressor(n_estimators=100, random_state=42)
         modelo_rf.fit(X_train, y_train.ravel())
 
         # Predicción con Random Forest
+        años_prediccion = list(range(inicio_prediccion, fin_prediccion + 1))
+        años_normalizados = scaler_X.transform(pd.DataFrame(años_prediccion))
         predicciones_rf_normalizadas = modelo_rf.predict(años_normalizados)
         predicciones_rf = scaler_y.inverse_transform(predicciones_rf_normalizadas.reshape(-1, 1))
 
         predicciones_rf_df = pd.DataFrame({
             "Año": años_prediccion,
-            "Predicción_RF": predicciones_rf.flatten()
+            "Predicción": predicciones_rf.flatten()
         })
 
         st.write("Tabla de predicciones Random Forest:")
         st.dataframe(predicciones_rf_df)
 
-        # Gráfico de predicciones Random Forest
-        fig_rf = px.line(predicciones_rf_df, x="Año", y="Predicción_RF",
-                         title="Predicciones Random Forest",
-                         labels={"Predicción_RF": "Cantidad de Artículos"})
+        # Gráfico combinado: Histórico, predicciones y tendencia
+        historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
+        historico_df["Tipo"] = "Histórico"
+        predicciones_rf_df["Tipo"] = "Predicción"
+        grafico_df = pd.concat([historico_df, predicciones_rf_df.rename(columns={"Predicción": "Cantidad de Artículos"})])
+
+        fig_rf = px.bar(
+            grafico_df,
+            x="Año",
+            y="Cantidad de Artículos",
+            color="Tipo",
+            title="Publicaciones Históricas, Predicciones y Tendencia",
+            barmode="group"
+        )
+        fig_rf.add_scatter(x=predicciones_rf_df["Año"], y=predicciones_rf_df["Predicción"], mode="lines+markers", name="Tendencia")
         st.plotly_chart(fig_rf)
 
         # Error del modelo Random Forest
