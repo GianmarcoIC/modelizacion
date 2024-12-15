@@ -188,3 +188,26 @@ if not data.empty:
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
 
+
+        # Modelo predictivo con árbol de decisiones
+        st.title("Modelo de Predicción - Árbol de Decisiones")
+        modelo_arbol = DecisionTreeRegressor(random_state=42)
+        modelo_arbol.fit(X, y)
+        predicciones_arbol = modelo_arbol.predict(X)
+
+        # Tabla de predicciones del árbol
+        arbol_df = pd.DataFrame({
+            "Año": X.flatten(),
+            "Predicción (Árbol)": predicciones_arbol
+        })
+        st.write("Predicciones del Árbol de Decisiones:")
+        st.dataframe(arbol_df)
+
+        # Visualización del árbol
+        st.subheader("Árbol de Decisión - Estructura")
+        arbol_texto = export_text(modelo_arbol, feature_names=["Año"])
+        st.text(arbol_texto)
+
+    except Exception as e:
+        st.error(f"Error en el modelo: {e}")
+
