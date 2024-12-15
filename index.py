@@ -166,19 +166,7 @@ if not data.empty:
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
-        # Preprocesamiento de datos
-        data = get_table_data("articulo")
-        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
-        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
-        X = datos_modelo[['anio_publicacion']]
-        y = datos_modelo['cantidad_articulos']
-        
-        # Escalado de datos
-        scaler_X = MinMaxScaler()
-        X_scaled = scaler_X.fit_transform(X)
-        
-        # División de los datos
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+       
         
         # Modelo de árbol de decisión
         modelo_arbol = DecisionTreeRegressor(random_state=42)
