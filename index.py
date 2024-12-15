@@ -112,7 +112,7 @@ if not data.empty:
 
         # Tabla de predicciones del árbol
         arbol_df = pd.DataFrame({
-            "Año": X.flatten(),
+            "Año": X.values.flatten(),
             "Predicción (Árbol)": predicciones_arbol
         })
         st.write("Predicciones del Árbol de Decisiones:")
