@@ -34,6 +34,53 @@ def get_table_data(table_name):
         st.warning(f"La tabla {table_name} está vacía.")
         return pd.DataFrame()
 
+# Función CRUD
+def insert_row(table_name, fields):
+    data = {field: st.sidebar.text_input(f"Ingresar {field}") for field in fields if field != "id"}
+    if st.sidebar.button("Insertar"):
+        try:
+            supabase.table(table_name).insert([data]).execute()
+            st.success("Registro insertado correctamente")
+        except Exception as e:
+            st.error(f"Error al insertar datos: {e}")
+
+def update_row(table_name, fields):
+    record_id = st.sidebar.number_input("ID del registro a actualizar", min_value=1, step=1)
+    data = {field: st.sidebar.text_input(f"Nuevo valor para {field}") for field in fields if field != "id"}
+    if st.sidebar.button("Actualizar"):
+        try:
+            supabase.table(table_name).update(data).eq("id", record_id).execute()
+            st.success("Registro actualizado correctamente")
+        except Exception as e:
+            st.error(f"Error al actualizar datos: {e}")
+
+def delete_row(table_name):
+    record_id = st.sidebar.number_input("ID del registro a eliminar", min_value=1, step=1)
+    if st.sidebar.button("Eliminar"):
+        try:
+            supabase.table(table_name).delete().eq("id", record_id).execute()
+            st.success("Registro eliminado correctamente")
+        except Exception as e:
+            st.error(f"Error al eliminar datos: {e}")
+
+# CRUD en la barra lateral
+st.sidebar.title("CRUD")
+selected_table = st.sidebar.selectbox("Selecciona una tabla", ["articulo", "estudiante", "institucion", "indizacion"])
+crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
+
+data = get_table_data(selected_table)
+fields = list(data.columns) if not data.empty else []
+
+if crud_action == "Crear":
+    insert_row(selected_table, fields)
+elif crud_action == "Actualizar":
+    update_row(selected_table, fields)
+elif crud_action == "Eliminar":
+    delete_row(selected_table)
+
+st.write(f"Datos actuales en la tabla {selected_table}:")
+st.dataframe(data)
+
 # Modelo predictivo con red neuronal
 data = get_table_data("articulo")
 if not data.empty:
@@ -91,6 +138,43 @@ if not data.empty:
             barmode="group"
         )
         st.plotly_chart(fig)
+
+        # Gráficos por año
+        for año in años_prediccion:
+            prediccion_anual = predicciones_df[predicciones_df['Año'] == año]
+            fig_anual = px.bar(
+                prediccion_anual,
+                x="Año",
+                y="Predicción",
+                title=f"Predicción para el año {año}",
+                labels={"Predicción": "Cantidad de Artículos"},
+            )
+            st.plotly_chart(fig_anual)
+
+        # Visualización de red neuronal
+        st.subheader("Red Neuronal - Arquitectura")
+        nn_graph = Digraph(format="png")
+        nn_graph.attr(rankdir="LR")
+
+        nn_graph.node("Input", "Año", shape="circle", style="filled", color="lightblue")
+        for i in range(1, 65):
+            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i}", shape="circle", style="filled", color="lightgreen")
+        for i in range(1, 33):
+            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i}", shape="circle", style="filled", color="lightyellow")
+        nn_graph.node("Output", "Predicción", shape="circle", style="filled", color="orange")
+
+        nn_graph.edge("Input", "Hidden1_1")
+        for i in range(1, 65):
+            for j in range(1, 33):
+                nn_graph.edge(f"Hidden1_{i}", f"Hidden2_{j}")
+        for i in range(1, 33):
+            nn_graph.edge(f"Hidden2_{i}", "Output")
+
+        st.graphviz_chart(nn_graph)
+
+        # Gráfico de comparación: error de predicción
+        errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
+        st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
