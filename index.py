@@ -5,7 +5,7 @@ import plotly.express as px
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
-from supabase import create_client
+from supabase import create_client, Client
 
 # Configuración Supabase
 SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
@@ -17,22 +17,35 @@ st.image("https://upload.wikimedia.org/wikipedia/commons/4/45/Logo_de_Streamlit.
 
 # Función para cargar datos de Supabase
 def load_data(table_name):
-    data = supabase.table(table_name).select("*").execute().data
-    if not data:
+    try:
+        data = supabase.table(table_name).select("*").execute().data
+        if not data:
+            return pd.DataFrame()
+        return pd.DataFrame(data)
+    except Exception as e:
+        st.error(f"Error al cargar datos de {table_name}: {e}")
         return pd.DataFrame()
-    return pd.DataFrame(data)
 
 # Función para guardar datos en Supabase
 def save_data(table_name, record):
-    supabase.table(table_name).insert(record).execute()
+    try:
+        supabase.table(table_name).insert(record).execute()
+    except Exception as e:
+        st.error(f"Error al guardar datos en {table_name}: {e}")
 
 # Función para actualizar datos en Supabase
 def update_data(table_name, record_id, record):
-    supabase.table(table_name).update(record).eq("id", record_id).execute()
+    try:
+        supabase.table(table_name).update(record).eq("id", record_id).execute()
+    except Exception as e:
+        st.error(f"Error al actualizar datos en {table_name}: {e}")
 
 # Función para eliminar datos en Supabase
 def delete_data(table_name, record_id):
-    supabase.table(table_name).delete().eq("id", record_id).execute()
+    try:
+        supabase.table(table_name).delete().eq("id", record_id).execute()
+    except Exception as e:
+        st.error(f"Error al eliminar datos en {table_name}: {e}")
 
 # CRUD por tabla
 def crud_table(table_name):
