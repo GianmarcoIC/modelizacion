@@ -41,7 +41,7 @@ def get_data_from_supabase(table_name):
 
 # Interfaz de usuario
 st.title("Análisis de Modelos Predictivos")
-data = get_data_from_supabase("variable")  # Cambia "variable" por el nombre real de la tabla.
+data = get_data_from_supabase("icontinental")  # Cambia "variable" por el nombre real de la tabla.
 
 if not data.empty:
     st.subheader("Datos Importados de Supabase")
