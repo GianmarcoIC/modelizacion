@@ -6,8 +6,6 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from supabase import create_client
-from graphviz import Digraph
-
 
 # Configuración Supabase
 SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
@@ -20,6 +18,8 @@ st.image("https://upload.wikimedia.org/wikipedia/commons/4/45/Logo_de_Streamlit.
 # Función para cargar datos de Supabase
 def load_data(table_name):
     data = supabase.table(table_name).select("*").execute().data
+    if not data:
+        return pd.DataFrame()
     return pd.DataFrame(data)
 
 # Función para guardar datos en Supabase
@@ -38,6 +38,11 @@ def delete_data(table_name, record_id):
 def crud_table(table_name):
     st.subheader(f"Gestión de {table_name}")
     data = load_data(table_name)
+
+    if data.empty:
+        st.warning(f"No hay datos disponibles en la tabla {table_name}.")
+        return
+
     st.dataframe(data)
 
     with st.expander("Insertar nuevo registro"):
@@ -62,11 +67,21 @@ def crud_table(table_name):
 # Modelos predictivos
 def prediction_model():
     df = load_data("Articulo")
+
+    if df.empty or "anio_publicacion" not in df.columns:
+        st.warning("No hay datos suficientes para realizar la predicción.")
+        return
+
     df["anio_publicacion"] = pd.to_numeric(df["anio_publicacion"], errors="coerce")
+    df = df.dropna(subset=["anio_publicacion"])
 
     data = df.groupby("anio_publicacion").size().reset_index(name="cantidad")
     X = data[["anio_publicacion"]]
     y = data["cantidad"]
+
+    if len(X) < 2:
+        st.warning("No hay suficientes datos históricos para entrenar el modelo.")
+        return
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
