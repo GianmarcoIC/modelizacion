@@ -1,158 +1,105 @@
-import streamlit as st
+# Importar bibliotecas necesarias
+import numpy as np
 import pandas as pd
-import plotly.express as px
-from supabase import create_client, Client
+import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+from keras.models import Sequential
+from keras.layers import Dense
+from graphviz import Digraph
 
-# Configuración Supabase
-SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Z21jdG51bGRuZ3psdWRnZXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM4ODQ4NjMsImV4cCI6MjA0OTQ2MDg2M30.T5LUIZCZA45OxtjTV2X9Ib6htozrrRdaKIjwgK1dsmg"
+# Datos simulados para entrenamiento y prueba
+np.random.seed(42)
+years = np.arange(2000, 2025)
+articles = np.random.poisson(lam=20, size=len(years))  # Datos simulados
 
-st.image("log_ic-removebg-preview.png", width=200)
-st.title("Modelo Predictivo - Red Neuronal 2024")
+data_simulated = pd.DataFrame({"anio_publicacion": years, "cantidad_articulos": articles})
 
-# Crear cliente Supabase
-try:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-except Exception as e:
-    st.error(f"Error al conectar con Supabase: {e}")
+# Preparar datos para los modelos
+X = data_simulated[["anio_publicacion"]]
+y = data_simulated["cantidad_articulos"]
+X_normalized = (X - X.min()) / (X.max() - X.min())
+y_normalized = (y - y.min()) / (y.max() - y.min())
 
-# Configuración de predicción
-st.sidebar.title("Configuración de Predicción")
-inicio_prediccion = st.sidebar.number_input("Año inicial de predicción", value=2024, step=1)
-fin_prediccion = st.sidebar.number_input("Año final de predicción", value=2026, step=1)
+# Dividir datos en entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
 
-# Función para obtener datos de una tabla
-def get_table_data(table_name):
-    try:
-        response = supabase.table(table_name).select("*").execute()
-        if response.data:
-            return pd.DataFrame(response.data)
-        else:
-            st.warning(f"La tabla {table_name} está vacía.")
-            return pd.DataFrame()
-    except Exception as e:
-        st.error(f"Error al consultar la tabla {table_name}: {e}")
-        return pd.DataFrame()
+# Años para predicción
+anos_prediccion = np.arange(2025, 2031)
+anos_normalizados = (pd.DataFrame(anos_prediccion) - X.min().values[0]) / (X.max().values[0] - X.min().values[0])
 
-# CRUD básico
-st.sidebar.title("CRUD")
-selected_table = st.sidebar.selectbox("Selecciona una tabla", ["articulo", "estudiante", "institucion", "indizacion"])
-crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
+# Modelo de Red Neuronal
+modelo_nn = Sequential([
+    Dense(5, activation='relu', input_dim=1),
+    Dense(5, activation='relu'),
+    Dense(1, activation='linear')
+])
+modelo_nn.compile(optimizer='adam', loss='mean_squared_error')
+modelo_nn.fit(X_train, y_train, epochs=100, verbose=0)
 
-data = get_table_data(selected_table)
-fields = list(data.columns) if not data.empty else []
+# Predicciones de Red Neuronal
+predicciones_nn = modelo_nn.predict(anos_normalizados)
+predicciones_desnormalizadas = predicciones_nn * (y.max() - y.min()) + y.min()
 
-def insert_row(table_name, fields):
-    data = {field: st.sidebar.text_input(f"Ingresar {field}") for field in fields if field != "id"}
-    if st.sidebar.button("Insertar"):
-        try:
-            response = supabase.table(table_name).insert([data]).execute()
-            if response.error:
-                st.error(f"Error al insertar datos: {response.error}")
-            else:
-                st.success("Datos insertados correctamente.")
-        except Exception as e:
-            st.error(f"Error al insertar datos: {e}")
+# Modelo Random Forest
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_model.fit(X_train.values, y_train.values)
 
-def update_row(table_name, fields):
-    record_id = st.sidebar.number_input("ID del registro a actualizar", min_value=1, step=1)
-    data = {field: st.sidebar.text_input(f"Nuevo valor para {field}") for field in fields if field != "id"}
-    if st.sidebar.button("Actualizar"):
-        try:
-            response = supabase.table(table_name).update(data).eq("id", record_id).execute()
-            if response.error:
-                st.error(f"Error al actualizar datos: {response.error}")
-            else:
-                st.success("Datos actualizados correctamente.")
-        except Exception as e:
-            st.error(f"Error al actualizar datos: {e}")
+# Predicciones de Random Forest
+pred_rf = rf_model.predict(anos_normalizados.values)
+pred_rf_desnormalizadas = pred_rf * (y.max() - y.min()) + y.min()
 
-def delete_row(table_name):
-    record_id = st.sidebar.number_input("ID del registro a eliminar", min_value=1, step=1)
-    if st.sidebar.button("Eliminar"):
-        try:
-            response = supabase.table(table_name).delete().eq("id", record_id).execute()
-            if response.error:
-                st.error(f"Error al eliminar datos: {response.error}")
-            else:
-                st.success("Datos eliminados correctamente.")
-        except Exception as e:
-            st.error(f"Error al eliminar datos: {e}")
+# Crear tabla comparativa
+comparison_df = pd.DataFrame({
+    "Año": anos_prediccion,
+    "Red Neuronal (Predicciones)": predicciones_desnormalizadas.flatten(),
+    "Random Forest (Predicciones)": pred_rf_desnormalizadas
+})
 
-if crud_action == "Crear":
-    insert_row(selected_table, fields)
-elif crud_action == "Actualizar":
-    update_row(selected_table, fields)
-elif crud_action == "Eliminar":
-    delete_row(selected_table)
+# Calcular métricas
+mse_nn = mean_squared_error(y_test.values, modelo_nn.predict(X_test))
+mse_rf = mean_squared_error(y_test.values, rf_model.predict(X_test.values))
+comparison_df["Diferencia Absoluta"] = abs(comparison_df["Red Neuronal (Predicciones)"] - comparison_df["Random Forest (Predicciones)"])
 
-st.write(f"Datos actuales en la tabla {selected_table}:")
-st.dataframe(data)
+# Visualizar los resultados
+plt.figure(figsize=(10, 6))
+plt.plot(anos_prediccion, comparison_df["Red Neuronal (Predicciones)"], label="Red Neuronal", marker='o', color='blue')
+plt.plot(anos_prediccion, comparison_df["Random Forest (Predicciones)"], label="Random Forest", marker='s', color='green')
+plt.title("Comparación de Predicciones: Red Neuronal vs Random Forest")
+plt.xlabel("Año")
+plt.ylabel("Cantidad de Artículos")
+plt.legend()
+plt.grid()
+plt.show()
 
-# Modelo predictivo y visualización
-data = get_table_data("articulo")
-if not data.empty:
-    try:
-        # Preparación de datos históricos
-        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
-        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
+# Generar gráfico de red neuronal
+nn_graph = Digraph(format="png")
+nn_graph.attr(rankdir="LR")
 
-        # Normalización de datos
-        X = datos_modelo[['anio_publicacion']]
-        y = datos_modelo['cantidad_articulos']
-        X_normalized = (X - X.min()) / (X.max() - X.min())
-        y_normalized = (y - y.min()) / (y.max() - y.min())
+# Capa de entrada
+nn_graph.node("Input", "Año", shape="circle", style="filled", color="lightblue")
 
-        # División y entrenamiento
-        X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
-        modelo_nn = Sequential([
-            Dense(10, activation='relu', input_dim=1),
-            Dense(10, activation='relu'),
-            Dense(1, activation='linear')
-        ])
-        modelo_nn.compile(optimizer='adam', loss='mean_squared_error')
-        modelo_nn.fit(X_train, y_train, epochs=150, verbose=0)
+# Primera capa oculta
+for i in range(1, 6):
+    nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i}", shape="circle", style="filled", color="lightgreen")
+    nn_graph.edge("Input", f"Hidden1_{i}")
 
-        # Predicción
-        años_prediccion = list(range(inicio_prediccion, fin_prediccion + 1))
-        años_normalizados = (pd.DataFrame(años_prediccion) - X.min().values[0]) / (X.max().values[0] - X.min().values[0])
-        predicciones = modelo_nn.predict(años_normalizados)
-        predicciones_desnormalizadas = predicciones * (y.max() - y.min()) + y.min()
+# Segunda capa oculta
+for i in range(1, 6):
+    for j in range(1, 6):
+        nn_graph.node(f"Hidden2_{j}", f"Oculta 2-{j}", shape="circle", style="filled", color="lightgreen")
+        nn_graph.edge(f"Hidden1_{i}", f"Hidden2_{j}")
 
-        # DataFrame para predicciones
-        predicciones_df = pd.DataFrame({
-            "Año": años_prediccion,
-            "Cantidad Predicha": predicciones_desnormalizadas.flatten()
-        })
+# Capa de salida
+nn_graph.node("Output", "Predicción", shape="circle", style="filled", color="orange")
+for i in range(1, 6):
+    nn_graph.edge(f"Hidden2_{i}", "Output")
 
-        # Combinación de datos históricos y predicciones
-        historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
-        historico_df["Tipo"] = "Histórico"
-        predicciones_df["Tipo"] = "Predicción"
-        grafico_df = pd.concat([historico_df, predicciones_df.rename(columns={"Cantidad Predicha": "Cantidad de Artículos"})])
+nn_graph.render("nn_graph", view=True)
 
-        # Gráfico combinado
-        fig = px.bar(
-            grafico_df,
-            x="Año",
-            y="Cantidad de Artículos",
-            color="Tipo",
-            title="Predicción de Artículos Publicados por Año",
-            labels={"Año": "Año", "Cantidad de Artículos": "Cantidad de Artículos", "Tipo": "Datos"},
-            barmode="group"
-        )
-        fig.add_scatter(x=predicciones_df["Año"], y=predicciones_df["Cantidad Predicha"], mode='lines+markers', name="Tendencia Predicha")
-        st.plotly_chart(fig)
-
-        # Tabla de predicciones y análisis textual
-        st.write("Tabla de predicciones:")
-        st.dataframe(predicciones_df)
-        promedio_pred = predicciones_df["Cantidad Predicha"].mean()
-        st.write(f"**Análisis de predicciones:** Se espera un promedio de publicaciones anuales de aproximadamente {promedio_pred:.2f} artículos en los años predichos.")
-        
-    except Exception as e:
-        st.error(f"Error en el modelo predictivo: {e}")
+# Imprimir tabla comparativa y métricas
+print("\nTabla Comparativa:\n", comparison_df)
+print("\nError Cuadrático Medio (MSE):")
+print(f"Red Neuronal: {mse_nn:.4f}")
+print(f"Random Forest: {mse_rf:.4f}")
