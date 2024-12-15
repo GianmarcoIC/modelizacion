@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from supabase import create_client, Client
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
@@ -170,8 +171,8 @@ if not data.empty:
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
 
-# Modelo predictivo con árbol de decisiones
-st.title("Modelo de Predicción - Árbol de Decisiones")
+# Modelo predictivo con Random Forest
+st.title("Modelo de Predicción - Random Forest")
 
 try:
     # Obtener datos actualizados en tiempo real
@@ -198,63 +199,49 @@ try:
         y = datos_filtrados['cantidad_articulos']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        # Entrenamiento del modelo
-        modelo_arbol = DecisionTreeRegressor(random_state=42)
-        modelo_arbol.fit(X_train, y_train)
+        # Entrenamiento del modelo Random Forest
+        modelo_rf = RandomForestRegressor(random_state=42, n_estimators=100)
+        modelo_rf.fit(X_train, y_train)
 
         # Predicción en datos de prueba
-        predicciones_test = modelo_arbol.predict(X_test)
+        predicciones_test = modelo_rf.predict(X_test)
 
         # Predicción en todo el rango seleccionado
         X_prediccion = pd.DataFrame({"anio_publicacion": range(anio_prediccion[0], anio_prediccion[1] + 1)})
-        predicciones_rango = modelo_arbol.predict(X_prediccion)
+        predicciones_rango = modelo_rf.predict(X_prediccion)
 
         # Tabla de predicciones
         tabla_predicciones = pd.DataFrame({
             "Año": X_prediccion['anio_publicacion'],
-            "Predicción (Árbol)": predicciones_rango
+            "Predicción (Random Forest)": predicciones_rango
         })
-        st.write("Predicciones del Árbol de Decisiones:")
+        st.write("Predicciones del Modelo Random Forest:")
         st.dataframe(tabla_predicciones)
-
-        # Visualización del árbol de decisión
-        st.subheader("Árbol de Decisión - Estructura")
-        fig, ax = plt.subplots(figsize=(12, 8))
-        plot_tree(modelo_arbol, feature_names=["anio_publicacion"], filled=True, rounded=True, fontsize=10, ax=ax)
-        st.pyplot(fig)
-
-        # Exportar estructura textual del árbol
-        arbol_texto = export_text(modelo_arbol, feature_names=["anio_publicacion"])
-        st.text("Estructura del árbol de decisión:")
-        st.text(arbol_texto)
 
         # Gráfico comparativo
         st.subheader("Gráfico Comparativo de Predicciones")
         plt.figure(figsize=(10, 6))
-        plt.plot(datos_filtrados['anio_publicacion'], datos_filtrados['cantidad_articulos'], 
-                 label="Cantidad Real", marker="o", linestyle="--", color="blue")
-        plt.plot(X_prediccion['anio_publicacion'], predicciones_rango, 
-                 label="Predicción (Árbol)", marker="x", linestyle="-", color="red")
+        plt.bar(tabla_predicciones['Año'], tabla_predicciones['Predicción (Random Forest)'], 
+                color="skyblue", label="Predicción (Random Forest)")
         plt.xlabel("Año de Publicación")
         plt.ylabel("Cantidad de Artículos")
-        plt.title("Comparación entre Datos Reales y Predicciones")
+        plt.title("Predicción de Cantidad de Artículos por Año")
         plt.legend()
-        plt.grid()
+        plt.grid(axis="y")
         st.pyplot(plt.gcf())
 
         # Métrica del modelo
-        mse_arbol = mean_squared_error(y_test, predicciones_test)
-        st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
+        mse_rf = mean_squared_error(y_test, predicciones_test)
+        st.write(f"Error cuadrático medio (MSE) del Random Forest: {mse_rf:.4f}")
 
 except Exception as e:
-    st.error(f"Error en el modelo de Árbol de Decisión: {e}")
+    st.error(f"Error en el modelo Random Forest: {e}")
 
 # Conclusiones
 st.title("Conclusiones")
 st.markdown("""
-- **Red Neuronal:** Captura relaciones no lineales complejas en los datos, ideal para predicciones detalladas.
-- **Árbol de Decisión:** Fácil de interpretar, muestra claramente las reglas usadas para predecir.
-- La elección del modelo depende del equilibrio necesario entre precisión y explicabilidad.
+- **Random Forest:** Modelo robusto y efectivo para predicciones con alta precisión, útil para analizar grandes conjuntos de datos.
+- Permite manejar relaciones complejas y no lineales, ofreciendo resultados confiables.
+- Es importante ajustar el rango de predicción para obtener resultados relevantes.
 """)
-
 
