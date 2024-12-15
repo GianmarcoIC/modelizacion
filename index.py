@@ -5,6 +5,7 @@ from supabase import create_client, Client
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
+from sklearn.tree import DecisionTreeRegressor, export_text
 from graphviz import Digraph
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -33,53 +34,6 @@ def get_table_data(table_name):
     else:
         st.warning(f"La tabla {table_name} está vacía.")
         return pd.DataFrame()
-
-# Función CRUD
-def insert_row(table_name, fields):
-    data = {field: st.sidebar.text_input(f"Ingresar {field}") for field in fields if field != "id"}
-    if st.sidebar.button("Insertar"):
-        try:
-            supabase.table(table_name).insert([data]).execute()
-            st.success("Registro insertado correctamente")
-        except Exception as e:
-            st.error(f"Error al insertar datos: {e}")
-
-def update_row(table_name, fields):
-    record_id = st.sidebar.number_input("ID del registro a actualizar", min_value=1, step=1)
-    data = {field: st.sidebar.text_input(f"Nuevo valor para {field}") for field in fields if field != "id"}
-    if st.sidebar.button("Actualizar"):
-        try:
-            supabase.table(table_name).update(data).eq("id", record_id).execute()
-            st.success("Registro actualizado correctamente")
-        except Exception as e:
-            st.error(f"Error al actualizar datos: {e}")
-
-def delete_row(table_name):
-    record_id = st.sidebar.number_input("ID del registro a eliminar", min_value=1, step=1)
-    if st.sidebar.button("Eliminar"):
-        try:
-            supabase.table(table_name).delete().eq("id", record_id).execute()
-            st.success("Registro eliminado correctamente")
-        except Exception as e:
-            st.error(f"Error al eliminar datos: {e}")
-
-# CRUD en la barra lateral
-st.sidebar.title("CRUD")
-selected_table = st.sidebar.selectbox("Selecciona una tabla", ["articulo", "estudiante", "institucion", "indizacion"])
-crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
-
-data = get_table_data(selected_table)
-fields = list(data.columns) if not data.empty else []
-
-if crud_action == "Crear":
-    insert_row(selected_table, fields)
-elif crud_action == "Actualizar":
-    update_row(selected_table, fields)
-elif crud_action == "Eliminar":
-    delete_row(selected_table)
-
-st.write(f"Datos actuales en la tabla {selected_table}:")
-st.dataframe(data)
 
 # Modelo predictivo con red neuronal
 data = get_table_data("articulo")
@@ -123,7 +77,7 @@ if not data.empty:
         st.write("Tabla de predicciones:")
         st.dataframe(predicciones_df)
 
-        # Gráfico combinado: Histórico y predicciones
+        # Gráfico combinado: Histórico, predicciones y tendencia
         historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
         historico_df["Tipo"] = "Histórico"
         predicciones_df["Tipo"] = "Predicción"
@@ -134,22 +88,11 @@ if not data.empty:
             x="Año",
             y="Cantidad de Artículos",
             color="Tipo",
-            title="Publicaciones Históricas y Predicciones",
+            title="Publicaciones Históricas, Predicciones y Tendencia",
             barmode="group"
         )
+        fig.add_scatter(x=predicciones_df["Año"], y=predicciones_df["Predicción"], mode="lines+markers", name="Tendencia")
         st.plotly_chart(fig)
-
-        # Gráficos por año
-        for año in años_prediccion:
-            prediccion_anual = predicciones_df[predicciones_df['Año'] == año]
-            fig_anual = px.bar(
-                prediccion_anual,
-                x="Año",
-                y="Predicción",
-                title=f"Predicción para el año {año}",
-                labels={"Predicción": "Cantidad de Artículos"},
-            )
-            st.plotly_chart(fig_anual)
 
         # Visualización de red neuronal
         st.subheader("Red Neuronal - Arquitectura")
@@ -172,9 +115,28 @@ if not data.empty:
 
         st.graphviz_chart(nn_graph)
 
-        # Gráfico de comparación: error de predicción
+        # Error del modelo
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
+
+        # Modelo predictivo con árbol de decisiones
+        st.title("Modelo de Predicción - Árbol de Decisiones")
+        modelo_arbol = DecisionTreeRegressor(random_state=42)
+        modelo_arbol.fit(X, y)
+        predicciones_arbol = modelo_arbol.predict(X)
+
+        # Tabla de predicciones del árbol
+        arbol_df = pd.DataFrame({
+            "Año": X.flatten(),
+            "Predicción (Árbol)": predicciones_arbol
+        })
+        st.write("Predicciones del Árbol de Decisiones:")
+        st.dataframe(arbol_df)
+
+        # Visualización del árbol
+        st.subheader("Árbol de Decisión - Estructura")
+        arbol_texto = export_text(modelo_arbol, feature_names=["Año"])
+        st.text(arbol_texto)
 
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
