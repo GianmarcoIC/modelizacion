@@ -171,6 +171,15 @@ if not data.empty:
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
 
+# Función ficticia para obtener datos de la tabla
+def get_table_data(table_name):
+    # Simulación de datos para demostración
+    data = {
+        'anio_publicacion': [2018, 2019, 2020, 2021, 2022, 2023],
+        'cantidad_articulos': [50, 60, 70, 65, 80, 90]
+    }
+    return pd.DataFrame(data)
+
 # Modelo predictivo con Random Forest
 st.title("Modelo de Predicción - Random Forest")
 
@@ -188,26 +197,20 @@ try:
         st.sidebar.header("Configuración de Predicción")
         anio_min = int(datos_modelo['anio_publicacion'].min())
         anio_max = int(datos_modelo['anio_publicacion'].max())
-        anio_prediccion = st.sidebar.slider("Selecciona el rango de años para predicción:", anio_min, anio_max, (anio_min, anio_max))
-
-        # Filtrar datos según el rango seleccionado
-        datos_filtrados = datos_modelo[(datos_modelo['anio_publicacion'] >= anio_prediccion[0]) & 
-                                       (datos_modelo['anio_publicacion'] <= anio_prediccion[1])]
+        anio_inicial = st.sidebar.number_input("Año inicial de predicción", min_value=anio_min, max_value=anio_max+10, value=anio_max+1)
+        anio_final = st.sidebar.number_input("Año final de predicción", min_value=anio_inicial, max_value=anio_max+20, value=anio_max+5)
 
         # Dividir datos en conjuntos de entrenamiento y prueba
-        X = datos_filtrados[['anio_publicacion']]
-        y = datos_filtrados['cantidad_articulos']
+        X = datos_modelo[['anio_publicacion']]
+        y = datos_modelo['cantidad_articulos']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         # Entrenamiento del modelo Random Forest
         modelo_rf = RandomForestRegressor(random_state=42, n_estimators=100)
         modelo_rf.fit(X_train, y_train)
 
-        # Predicción en datos de prueba
-        predicciones_test = modelo_rf.predict(X_test)
-
-        # Predicción en todo el rango seleccionado
-        X_prediccion = pd.DataFrame({"anio_publicacion": range(anio_prediccion[0], anio_prediccion[1] + 1)})
+        # Predicción en el rango personalizado
+        X_prediccion = pd.DataFrame({"anio_publicacion": range(anio_inicial, anio_final + 1)})
         predicciones_rango = modelo_rf.predict(X_prediccion)
 
         # Tabla de predicciones
@@ -231,6 +234,7 @@ try:
         st.pyplot(plt.gcf())
 
         # Métrica del modelo
+        predicciones_test = modelo_rf.predict(X_test)
         mse_rf = mean_squared_error(y_test, predicciones_test)
         st.write(f"Error cuadrático medio (MSE) del Random Forest: {mse_rf:.4f}")
 
