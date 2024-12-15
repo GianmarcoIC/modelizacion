@@ -1,127 +1,150 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
-from sklearn.ensemble import GradientBoostingRegressor
+from supabase import create_client, Client
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
-from supabase import create_client, Client
+from graphviz import Digraph
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 
-# Configuración Supabase
+# Configuración de Supabase
 SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Z21jdG51bGRuZ3psdWRnZXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM4ODQ4NjMsImV4cCI6MjA0OTQ2MDg2M30.T5LUIZCZA45OxtjTV2X9Ib6htozrrRdaKIjwgK1dsmg"
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Logo
 st.image("https://upload.wikimedia.org/wikipedia/commons/4/45/Logo_de_Streamlit.png", width=150)
+st.title("Modelo Predictivo - Red Neuronal 2024")
 
-# Función para cargar datos de Supabase
-def load_data(table_name):
+# Función para obtener datos de una tabla
+def get_table_data(table_name):
     try:
-        data = supabase.table(table_name).select("*").execute().data
-        if not data:
+        response = supabase.table(table_name).select("*").execute()
+        if response.data:
+            return pd.DataFrame(response.data)
+        else:
+            st.warning(f"La tabla {table_name} está vacía.")
             return pd.DataFrame()
-        return pd.DataFrame(data)
     except Exception as e:
-        st.error(f"Error al cargar datos de {table_name}: {e}")
+        st.error(f"Error al consultar la tabla {table_name}: {e}")
         return pd.DataFrame()
 
-# Función para guardar datos en Supabase
-def save_data(table_name, record):
+# Funciones CRUD
+def insert_row(table_name, fields):
+    data = {field: st.sidebar.text_input(f"Ingresar {field}") for field in fields if field != "id"}
+    if st.sidebar.button("Insertar"):
+        try:
+            insert_data(table_name, [data])
+        except Exception as e:
+            st.error(f"Error al insertar datos: {e}")
+
+def update_row(table_name, fields):
+    record_id = st.sidebar.number_input("ID del registro a actualizar", min_value=1, step=1)
+    data = {field: st.sidebar.text_input(f"Nuevo valor para {field}") for field in fields if field != "id"}
+    if st.sidebar.button("Actualizar"):
+        try:
+            update_data(table_name, record_id, {k: v for k, v in data.items() if v})
+        except Exception as e:
+            st.error(f"Error al actualizar datos: {e}")
+
+def delete_row(table_name):
+    record_id = st.sidebar.number_input("ID del registro a eliminar", min_value=1, step=1)
+    if st.sidebar.button("Eliminar"):
+        delete_data(table_name, record_id)
+
+def insert_data(table_name, data):
+    response = supabase.table(table_name).insert(data).execute()
+    if response.error:
+        st.error(f"Error al insertar datos en {table_name}: {response.error}")
+    else:
+        st.success(f"Datos insertados correctamente en {table_name}.")
+
+def update_data(table_name, id_value, data):
+    response = supabase.table(table_name).update(data).eq("id", id_value).execute()
+    if response.error:
+        st.error(f"Error al actualizar datos en {table_name}: {response.error}")
+    else:
+        st.success(f"Datos actualizados correctamente en {table_name}.")
+
+def delete_data(table_name, id_value):
+    response = supabase.table(table_name).delete().eq("id", id_value).execute()
+    if response.error:
+        st.error(f"Error al eliminar datos en {table_name}: {response.error}")
+    else:
+        st.success(f"Datos eliminados correctamente.")
+
+# CRUD en la barra lateral
+st.sidebar.title("CRUD")
+selected_table = st.sidebar.selectbox("Selecciona una tabla", ["articulo", "estudiante", "institucion", "indizacion"])
+crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
+
+data = get_table_data(selected_table)
+fields = list(data.columns) if not data.empty else []
+
+if crud_action == "Crear":
+    insert_row(selected_table, fields)
+elif crud_action == "Actualizar":
+    update_row(selected_table, fields)
+elif crud_action == "Eliminar":
+    delete_row(selected_table)
+
+st.write(f"Datos actuales en la tabla {selected_table}:")
+st.dataframe(data)
+
+# Modelo predictivo con red neuronal
+data = get_table_data("articulo")
+if not data.empty:
     try:
-        supabase.table(table_name).insert(record).execute()
+        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
+        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
+        X = datos_modelo[['anio_publicacion']]
+        y = datos_modelo['cantidad_articulos']
+
+        # Normalización
+        X_normalized = (X - X.min()) / (X.max() - X.min())
+        y_normalized = (y - y.min()) / (y.max() - y.min())
+
+        X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
+
+        # Modelo
+        modelo_nn = Sequential([
+            Dense(5, activation='relu', input_dim=1),
+            Dense(5, activation='relu'),
+            Dense(1, activation='linear')
+        ])
+        modelo_nn.compile(optimizer='adam', loss='mean_squared_error')
+        modelo_nn.fit(X_train, y_train, epochs=100, verbose=0)
+
+        # Predicción
+        años_prediccion = list(range(2024, 2026 + 1))
+        años_normalizados = (pd.DataFrame(años_prediccion) - X.min().values[0]) / (X.max().values[0] - X.min().values[0])
+        predicciones = modelo_nn.predict(años_normalizados)
+
+        predicciones_desnormalizadas = predicciones * (y.max() - y.min()) + y.min()
+        predicciones_df = pd.DataFrame({
+            "Año": años_prediccion,
+            "Predicción": predicciones_desnormalizadas.flatten()
+        })
+        st.write("Tabla de predicciones:")
+        st.dataframe(predicciones_df)
+
+        # Gráfico combinado: Histórico y predicciones
+        historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
+        historico_df["Tipo"] = "Histórico"
+        predicciones_df["Tipo"] = "Predicción"
+        grafico_df = pd.concat([historico_df, predicciones_df.rename(columns={"Predicción": "Cantidad de Artículos"})])
+
+        # Crear el gráfico de barras
+        fig = px.bar(
+            grafico_df,
+            x="Año",
+            y="Cantidad de Artículos",
+            color="Tipo",
+            title="Publicaciones Históricas y Predicciones",
+            labels={"Año": "Año", "Cantidad de Artículos": "Cantidad de Artículos", "Tipo": "Datos"},
+            barmode="group"
+        )
+        st.plotly_chart(fig)
     except Exception as e:
-        st.error(f"Error al guardar datos en {table_name}: {e}")
-
-# Función para actualizar datos en Supabase
-def update_data(table_name, record_id, record):
-    try:
-        supabase.table(table_name).update(record).eq("id", record_id).execute()
-    except Exception as e:
-        st.error(f"Error al actualizar datos en {table_name}: {e}")
-
-# Función para eliminar datos en Supabase
-def delete_data(table_name, record_id):
-    try:
-        supabase.table(table_name).delete().eq("id", record_id).execute()
-    except Exception as e:
-        st.error(f"Error al eliminar datos en {table_name}: {e}")
-
-# CRUD por tabla
-def crud_table(table_name):
-    st.subheader(f"Gestión de {table_name}")
-    data = load_data(table_name)
-
-    if data.empty:
-        st.warning(f"No hay datos disponibles en la tabla {table_name}.")
-        return
-
-    st.dataframe(data)
-
-    with st.expander("Insertar nuevo registro"):
-        fields = {col: st.text_input(f"{col}") for col in data.columns if col != "id"}
-        if st.button("Guardar", key=f"insert_{table_name}"):
-            save_data(table_name, fields)
-            st.success("Registro guardado exitosamente")
-
-    with st.expander("Actualizar registro existente"):
-        record_id = st.number_input("ID del registro", min_value=1, step=1, key=f"update_id_{table_name}")
-        fields = {col: st.text_input(f"Nuevo {col}") for col in data.columns if col != "id"}
-        if st.button("Actualizar", key=f"update_{table_name}"):
-            update_data(table_name, record_id, fields)
-            st.success("Registro actualizado exitosamente")
-
-    with st.expander("Eliminar registro"):
-        record_id = st.number_input("ID del registro", min_value=1, step=1, key=f"delete_id_{table_name}")
-        if st.button("Eliminar", key=f"delete_{table_name}"):
-            delete_data(table_name, record_id)
-            st.success("Registro eliminado exitosamente")
-
-# Modelos predictivos
-def prediction_model():
-    df = load_data("Articulo")
-
-    if df.empty or "anio_publicacion" not in df.columns:
-        st.warning("No hay datos suficientes para realizar la predicción.")
-        return
-
-    df["anio_publicacion"] = pd.to_numeric(df["anio_publicacion"], errors="coerce")
-    df = df.dropna(subset=["anio_publicacion"])
-
-    data = df.groupby("anio_publicacion").size().reset_index(name="cantidad")
-    X = data[["anio_publicacion"]]
-    y = data["cantidad"]
-
-    if len(X) < 2:
-        st.warning("No hay suficientes datos históricos para entrenar el modelo.")
-        return
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    model = GradientBoostingRegressor(random_state=42)
-    model.fit(X_train, y_train)
-    predictions = model.predict(X_test)
-
-    mse = mean_squared_error(y_test, predictions)
-    st.write(f"Error Cuadrático Medio (MSE): {mse}")
-
-    # Tendencia de predicción
-    future_years = pd.DataFrame({"anio_publicacion": range(data["anio_publicacion"].max() + 1, data["anio_publicacion"].max() + 6)})
-    future_predictions = model.predict(future_years)
-
-    combined_data = pd.concat([
-        data.rename(columns={"cantidad": "valor"}).assign(tipo="Histórico"),
-        future_years.assign(valor=future_predictions, tipo="Predicción")
-    ])
-
-    # Gráficos
-    st.subheader("Tendencia de Publicaciones")
-    fig = px.bar(combined_data, x="anio_publicacion", y="valor", color="tipo", barmode="group", title="Tendencia de Publicaciones")
-    st.plotly_chart(fig)
-
-# CRUD para todas las tablas
-for table in ["Estudiante", "Institucion", "Indizacion", "Articulo"]:
-    crud_table(table)
-
-# Modelo de predicción
-prediction_model()
+        st.error(f"Error en el modelo: {e}")
