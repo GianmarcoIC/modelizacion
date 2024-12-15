@@ -171,54 +171,52 @@ if not data.empty:
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
 
-# Función ficticia para obtener datos de la tabla
-def get_table_data(table_name):
-    # Simulación de datos para demostración
-    data = {
-        'anio_publicacion': [2018, 2019, 2020, 2021, 2022, 2023],
-        'cantidad_articulos': [50, 60, 70, 65, 80, 90]
-    }
-    return pd.DataFrame(data)
-
 # Modelo predictivo con Random Forest
-st.title("Modelo de Predicción - Random Forest")
+st.title("Modelo de Predicción - Random Forest Mejorado")
 
 try:
-    # Obtener datos actualizados en tiempo real
+    # Obtener datos simulados o desde la base de datos
     data = get_table_data("articulo")
     data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
     datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
 
-    # Verificación de datos
     if datos_modelo.empty:
         st.warning("No hay datos suficientes para construir el modelo.")
     else:
-        # Configuración de Predicción
+        # Configuración de predicción
         st.sidebar.header("Configuración de Predicción")
         anio_min = int(datos_modelo['anio_publicacion'].min())
         anio_max = int(datos_modelo['anio_publicacion'].max())
         anio_inicial = st.sidebar.number_input("Año inicial de predicción", min_value=anio_min, max_value=anio_max+10, value=anio_max+1)
         anio_final = st.sidebar.number_input("Año final de predicción", min_value=anio_inicial, max_value=anio_max+20, value=anio_max+5)
 
-        # Dividir datos en conjuntos de entrenamiento y prueba
+        # Escalamiento de datos
+        scaler_X_rf = MinMaxScaler()
+        scaler_y_rf = MinMaxScaler()
         X = datos_modelo[['anio_publicacion']]
-        y = datos_modelo['cantidad_articulos']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        y = datos_modelo['cantidad_articulos'].values.reshape(-1, 1)
+        X_scaled = scaler_X_rf.fit_transform(X)
+        y_scaled = scaler_y_rf.fit_transform(y)
+
+        # Dividir datos en conjuntos de entrenamiento y prueba
+        X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_scaled, test_size=0.2, random_state=42)
 
         # Entrenamiento del modelo Random Forest
         modelo_rf = RandomForestRegressor(random_state=42, n_estimators=100)
-        modelo_rf.fit(X_train, y_train)
+        modelo_rf.fit(X_train, y_train.ravel())
 
-        # Predicción en el rango personalizado
+        # Predicción para el rango personalizado
         X_prediccion = pd.DataFrame({"anio_publicacion": range(anio_inicial, anio_final + 1)})
-        predicciones_rango = modelo_rf.predict(X_prediccion)
+        X_pred_scaled = scaler_X_rf.transform(X_prediccion)
+        pred_scaled = modelo_rf.predict(X_pred_scaled)
+        predicciones_rango = scaler_y_rf.inverse_transform(pred_scaled.reshape(-1, 1)).flatten()
 
         # Tabla de predicciones
         tabla_predicciones = pd.DataFrame({
             "Año": X_prediccion['anio_publicacion'],
             "Predicción (Random Forest)": predicciones_rango
         })
-        st.write("Predicciones del Modelo Random Forest:")
+        st.write("Predicciones del Modelo Random Forest Mejorado:")
         st.dataframe(tabla_predicciones)
 
         # Gráfico comparativo
@@ -234,18 +232,10 @@ try:
         st.pyplot(plt.gcf())
 
         # Métrica del modelo
-        predicciones_test = modelo_rf.predict(X_test)
-        mse_rf = mean_squared_error(y_test, predicciones_test)
+        pred_test_scaled = modelo_rf.predict(X_test)
+        mse_rf = mean_squared_error(y_test, pred_test_scaled)
         st.write(f"Error cuadrático medio (MSE) del Random Forest: {mse_rf:.4f}")
 
 except Exception as e:
     st.error(f"Error en el modelo Random Forest: {e}")
-
-# Conclusiones
-st.title("Conclusiones")
-st.markdown("""
-- **Random Forest:** Modelo robusto y efectivo para predicciones con alta precisión, útil para analizar grandes conjuntos de datos.
-- Permite manejar relaciones complejas y no lineales, ofreciendo resultados confiables.
-- Es importante ajustar el rango de predicción para obtener resultados relevantes.
-""")
 
