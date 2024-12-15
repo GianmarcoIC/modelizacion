@@ -183,19 +183,26 @@ try:
     if datos_modelo.empty:
         st.warning("No hay datos suficientes para construir el modelo.")
     else:
+        # Dividir datos en conjuntos de entrenamiento y prueba
         X = datos_modelo[['anio_publicacion']]
         y = datos_modelo['cantidad_articulos']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         # Entrenamiento del modelo
         modelo_arbol = DecisionTreeRegressor(random_state=42)
-        modelo_arbol.fit(X, y)
-        predicciones_arbol = modelo_arbol.predict(X)
+        modelo_arbol.fit(X_train, y_train)
 
-        # Tabla de predicciones del árbol
+        # Predicción en datos de prueba
+        predicciones_test = modelo_arbol.predict(X_test)
+
+        # Predicción en toda la base de datos
+        predicciones_total = modelo_arbol.predict(X)
+
+        # Tabla de predicciones
         arbol_df = pd.DataFrame({
             "Año": X.values.flatten(),
             "Cantidad Real": y,
-            "Predicción (Árbol)": predicciones_arbol
+            "Predicción (Árbol)": predicciones_total
         })
         st.write("Predicciones del Árbol de Decisiones:")
         st.dataframe(arbol_df)
@@ -215,7 +222,7 @@ try:
         st.subheader("Gráfico Comparativo de Predicciones")
         plt.figure(figsize=(10, 6))
         plt.plot(X, y, label="Cantidad Real", marker="o", linestyle="--", color="blue")
-        plt.plot(X, predicciones_arbol, label="Predicción (Árbol)", marker="x", linestyle="-", color="red")
+        plt.plot(X, predicciones_total, label="Predicción (Árbol)", marker="x", linestyle="-", color="red")
         plt.xlabel("Año de Publicación")
         plt.ylabel("Cantidad de Artículos")
         plt.title("Comparación entre Datos Reales y Predicciones")
@@ -223,8 +230,8 @@ try:
         plt.grid()
         st.pyplot(plt.gcf())
 
-               # Métrica del modelo
-        mse_arbol = mean_squared_error(y, predicciones_arbol)
+        # Métrica del modelo
+        mse_arbol = mean_squared_error(y_test, predicciones_test)
         st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
 
 except Exception as e:
@@ -237,5 +244,6 @@ st.markdown("""
 - **Árbol de Decisión:** Fácil de interpretar, muestra claramente las reglas usadas para predecir.
 - La elección del modelo depende del equilibrio necesario entre precisión y explicabilidad.
 """)
+
 
 
