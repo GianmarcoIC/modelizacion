@@ -183,9 +183,19 @@ try:
     if datos_modelo.empty:
         st.warning("No hay datos suficientes para construir el modelo.")
     else:
+        # Configuración de Predicción
+        st.sidebar.header("Configuración de Predicción")
+        anio_min = int(datos_modelo['anio_publicacion'].min())
+        anio_max = int(datos_modelo['anio_publicacion'].max())
+        anio_prediccion = st.sidebar.slider("Selecciona el rango de años para predicción:", anio_min, anio_max, (anio_min, anio_max))
+
+        # Filtrar datos según el rango seleccionado
+        datos_filtrados = datos_modelo[(datos_modelo['anio_publicacion'] >= anio_prediccion[0]) & 
+                                       (datos_modelo['anio_publicacion'] <= anio_prediccion[1])]
+
         # Dividir datos en conjuntos de entrenamiento y prueba
-        X = datos_modelo[['anio_publicacion']]
-        y = datos_modelo['cantidad_articulos']
+        X = datos_filtrados[['anio_publicacion']]
+        y = datos_filtrados['cantidad_articulos']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         # Entrenamiento del modelo
@@ -195,17 +205,17 @@ try:
         # Predicción en datos de prueba
         predicciones_test = modelo_arbol.predict(X_test)
 
-        # Predicción en toda la base de datos
-        predicciones_total = modelo_arbol.predict(X)
+        # Predicción en todo el rango seleccionado
+        X_prediccion = pd.DataFrame({"anio_publicacion": range(anio_prediccion[0], anio_prediccion[1] + 1)})
+        predicciones_rango = modelo_arbol.predict(X_prediccion)
 
         # Tabla de predicciones
-        arbol_df = pd.DataFrame({
-            "Año": X.values.flatten(),
-            "Cantidad Real": y,
-            "Predicción (Árbol)": predicciones_total
+        tabla_predicciones = pd.DataFrame({
+            "Año": X_prediccion['anio_publicacion'],
+            "Predicción (Árbol)": predicciones_rango
         })
         st.write("Predicciones del Árbol de Decisiones:")
-        st.dataframe(arbol_df)
+        st.dataframe(tabla_predicciones)
 
         # Visualización del árbol de decisión
         st.subheader("Árbol de Decisión - Estructura")
@@ -221,8 +231,10 @@ try:
         # Gráfico comparativo
         st.subheader("Gráfico Comparativo de Predicciones")
         plt.figure(figsize=(10, 6))
-        plt.plot(X, y, label="Cantidad Real", marker="o", linestyle="--", color="blue")
-        plt.plot(X, predicciones_total, label="Predicción (Árbol)", marker="x", linestyle="-", color="red")
+        plt.plot(datos_filtrados['anio_publicacion'], datos_filtrados['cantidad_articulos'], 
+                 label="Cantidad Real", marker="o", linestyle="--", color="blue")
+        plt.plot(X_prediccion['anio_publicacion'], predicciones_rango, 
+                 label="Predicción (Árbol)", marker="x", linestyle="-", color="red")
         plt.xlabel("Año de Publicación")
         plt.ylabel("Cantidad de Artículos")
         plt.title("Comparación entre Datos Reales y Predicciones")
@@ -244,6 +256,5 @@ st.markdown("""
 - **Árbol de Decisión:** Fácil de interpretar, muestra claramente las reglas usadas para predecir.
 - La elección del modelo depende del equilibrio necesario entre precisión y explicabilidad.
 """)
-
 
 
