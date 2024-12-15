@@ -5,11 +5,12 @@ from supabase import create_client, Client
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
-from sklearn.tree import DecisionTreeRegressor, export_text
+from sklearn.tree import DecisionTreeRegressor, export_text, plot_tree
 from graphviz import Digraph
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
+import matplotlib.pyplot as plt
 
 # Configuración Supabase
 SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
@@ -35,7 +36,7 @@ def get_table_data(table_name):
         st.warning(f"La tabla {table_name} está vacía.")
         return pd.DataFrame()
 
-# Función CRUD
+# Funciones CRUD
 def insert_row(table_name, fields):
     data = {field: st.sidebar.text_input(f"Ingresar {field}") for field in fields if field != "id"}
     if st.sidebar.button("Insertar"):
@@ -166,7 +167,8 @@ if not data.empty:
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
-        # Después del modelo predictivo con red neuronal...
+    except Exception as e:
+        st.error(f"Error en el modelo: {e}")
 
 # Modelo predictivo con árbol de decisiones
 st.title("Modelo de Predicción - Árbol de Decisiones")
@@ -222,13 +224,17 @@ try:
         st.pyplot(plt.gcf())
 
         # Métrica del modelo
-        mse_arbol = mean_squared_error(y, predicciones_arbol)
-        st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
-
-except Exception as e:
-    # Manejo de errores
-    st.error(f"Error en el modelo: {e}")
-
-
+                mse_arbol = mean_squared_error(y, predicciones_arbol)
+                st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
         
-    
+        except Exception as e:
+            st.error(f"Error en el modelo de Árbol de Decisión: {e}")
+        
+        # Conclusión
+        st.title("Conclusiones")
+        st.markdown("""
+        - La Red Neuronal mostró predicciones más detalladas al capturar relaciones no lineales en los datos.
+        - El Árbol de Decisión es más interpretativo y permite visualizar la lógica utilizada en las predicciones.
+        - Ambos modelos pueden ser útiles dependiendo del contexto: precisión frente a interpretabilidad.
+        """)
+
