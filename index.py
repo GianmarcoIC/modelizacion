@@ -166,10 +166,9 @@ if not data.empty:
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
-          # Modelo predictivo con árbol de decisiones
-st.title("Modelo de Predicción - Árbol de Decisiones")
+     # Código que podría lanzar excepciones
+    st.title("Modelo de Predicción - Árbol de Decisiones")
 
-try:
     # Obtener datos actualizados en tiempo real
     data = get_table_data("articulo")
     data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
