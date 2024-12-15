@@ -8,4 +8,4 @@ graphviz
 tensorflow
 seaborn
 bs4
-flatten
+
