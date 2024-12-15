@@ -123,7 +123,7 @@ if not data.empty:
         st.write("Tabla de predicciones:")
         st.dataframe(predicciones_df)
 
-        # Gráfico combinado: Histórico y predicciones
+        # Gráfico combinado: Histórico, predicciones y tendencia
         historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
         historico_df["Tipo"] = "Histórico"
         predicciones_df["Tipo"] = "Predicción"
@@ -134,22 +134,11 @@ if not data.empty:
             x="Año",
             y="Cantidad de Artículos",
             color="Tipo",
-            title="Publicaciones Históricas y Predicciones",
+            title="Publicaciones Históricas, Predicciones y Tendencia",
             barmode="group"
         )
+        fig.add_scatter(x=predicciones_df["Año"], y=predicciones_df["Predicción"], mode="lines+markers", name="Tendencia")
         st.plotly_chart(fig)
-
-        # Gráficos por año
-        for año in años_prediccion:
-            prediccion_anual = predicciones_df[predicciones_df['Año'] == año]
-            fig_anual = px.bar(
-                prediccion_anual,
-                x="Año",
-                y="Predicción",
-                title=f"Predicción para el año {año}",
-                labels={"Predicción": "Cantidad de Artículos"},
-            )
-            st.plotly_chart(fig_anual)
 
         # Visualización de red neuronal
         st.subheader("Red Neuronal - Arquitectura")
@@ -172,9 +161,29 @@ if not data.empty:
 
         st.graphviz_chart(nn_graph)
 
-        # Gráfico de comparación: error de predicción
+        # Error del modelo
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
+        # Modelo predictivo con árbol de decisiones
+        st.title("Modelo de Predicción - Árbol de Decisiones")
+        modelo_arbol = DecisionTreeRegressor(random_state=42)
+        modelo_arbol.fit(X, y)
+        predicciones_arbol = modelo_arbol.predict(X)
+
+        # Tabla de predicciones del árbol
+        arbol_df = pd.DataFrame({
+            "Año": X.flatten(),
+            "Predicción (Árbol)": predicciones_arbol
+        })
+        st.write("Predicciones del Árbol de Decisiones:")
+        st.dataframe(arbol_df)
+
+        # Visualización del árbol
+        st.subheader("Árbol de Decisión - Estructura")
+        arbol_texto = export_text(modelo_arbol, feature_names=["Año"])
+        st.text(arbol_texto)
+
     except Exception as e:
         st.error(f"Error en el modelo: {e}")
+
