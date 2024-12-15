@@ -166,7 +166,9 @@ if not data.empty:
         errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
-        # Modelo predictivo con árbol de decisiones
+        # Después del modelo predictivo con red neuronal...
+
+# Modelo predictivo con árbol de decisiones
 st.title("Modelo de Predicción - Árbol de Decisiones")
 
 try:
@@ -224,7 +226,9 @@ try:
         st.write(f"Error cuadrático medio (MSE) del Árbol de Decisión: {mse_arbol:.4f}")
 
 except Exception as e:
+    # Manejo de errores
     st.error(f"Error en el modelo: {e}")
+
 
         
     
