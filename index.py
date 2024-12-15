@@ -16,7 +16,7 @@ from tensorflow.keras.layers import Dense, Dropout
 SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Z21jdG51bGRuZ3psdWRnZXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM4ODQ4NjMsImV4cCI6MjA0OTQ2MDg2M30.T5LUIZCZA45OxtjTV2X9Ib6htozrrRdaKIjwgK1dsmg"
 
-st.image("log_ic-removebg-preview.png", width=200)
+st.image("log_ic-removebg-preview.png", width=300)
 st.title("Modelo Predictivo - Red Neuronal")
 
 # Crear cliente Supabase
