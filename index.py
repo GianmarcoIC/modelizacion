@@ -2,22 +2,21 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from supabase import create_client, Client
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
+from sklearn.tree import DecisionTreeRegressor, export_text
 from graphviz import Digraph
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
-import matplotlib.pyplot as plt
 
 # Configuración Supabase
 SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4Z21jdG51bGRuZ3psdWRnZXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM4ODQ4NjMsImV4cCI6MjA0OTQ2MDg2M30.T5LUIZCZA45OxtjTV2X9Ib6htozrrRdaKIjwgK1dsmg"
 
 st.image("log_ic-removebg-preview.png", width=200)
-st.title("Modelo Predictivo - Red Neuronal y Random Forest")
+st.title("Modelo Predictivo - Red Neuronal")
 
 # Crear cliente Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -36,14 +35,7 @@ def get_table_data(table_name):
         st.warning(f"La tabla {table_name} está vacía.")
         return pd.DataFrame()
 
-# CRUD
-st.sidebar.title("CRUD")
-selected_table = st.sidebar.selectbox("Selecciona una tabla", ["articulo", "estudiante", "institucion", "indizacion"])
-crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
-
-data = get_table_data(selected_table)
-fields = list(data.columns) if not data.empty else []
-
+# Función CRUD
 def insert_row(table_name, fields):
     data = {field: st.sidebar.text_input(f"Ingresar {field}") for field in fields if field != "id"}
     if st.sidebar.button("Insertar"):
@@ -72,22 +64,29 @@ def delete_row(table_name):
         except Exception as e:
             st.error(f"Error al eliminar datos: {e}")
 
+# CRUD en la barra lateral
+st.sidebar.title("CRUD")
+selected_table = st.sidebar.selectbox("Selecciona una tabla", ["articulo", "estudiante", "institucion", "indizacion"])
+crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
+
+data = get_table_data(selected_table)
+fields = list(data.columns) if not data.empty else []
+
 if crud_action == "Crear":
     insert_row(selected_table, fields)
 elif crud_action == "Actualizar":
     update_row(selected_table, fields)
 elif crud_action == "Eliminar":
-    delete_row(selected_table, fields)
+    delete_row(selected_table)
 
 st.write(f"Datos actuales en la tabla {selected_table}:")
 st.dataframe(data)
 
-# Red Neuronal
-st.header("Predicción con Red Neuronal")
+# Modelo predictivo con red neuronal
 data = get_table_data("articulo")
 if not data.empty:
     try:
-        # Preprocesamiento de datos para Red Neuronal
+        # Preprocesamiento de datos
         data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
         datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
         X = datos_modelo[['anio_publicacion']]
@@ -100,7 +99,7 @@ if not data.empty:
 
         X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
 
-        # Modelo Red Neuronal
+        # Modelo mejorado
         modelo_nn = Sequential([
             Dense(64, activation='relu', input_dim=1),
             Dropout(0.2),
@@ -112,32 +111,38 @@ if not data.empty:
         modelo_nn.compile(optimizer='adam', loss='mean_squared_error')
         modelo_nn.fit(X_train, y_train, epochs=150, batch_size=16, verbose=0)
 
-        # Predicción con Red Neuronal
+        # Predicción
         años_prediccion = list(range(inicio_prediccion, fin_prediccion + 1))
         años_normalizados = scaler_X.transform(pd.DataFrame(años_prediccion))
-        predicciones_nn_normalizadas = modelo_nn.predict(años_normalizados)
-        predicciones_nn = scaler_y.inverse_transform(predicciones_nn_normalizadas)
+        predicciones_normalizadas = modelo_nn.predict(años_normalizados)
+        predicciones = scaler_y.inverse_transform(predicciones_normalizadas)
 
-        predicciones_nn_df = pd.DataFrame({
+        predicciones_df = pd.DataFrame({
             "Año": años_prediccion,
-            "Predicción_NN": predicciones_nn.flatten()
+            "Predicción": predicciones.flatten()
         })
-
         st.write("Tabla de predicciones Red Neuronal:")
-        st.dataframe(predicciones_nn_df)
+        st.dataframe(predicciones_df)
 
-        # Gráfico de predicciones Red Neuronal
-        fig_nn = px.line(predicciones_nn_df, x="Año", y="Predicción_NN",
-                         title="Predicciones Red Neuronal",
-                         labels={"Predicción_NN": "Cantidad de Artículos"})
-        st.plotly_chart(fig_nn)
+        # Gráfico combinado: Histórico, predicciones y tendencia
+        historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
+        historico_df["Tipo"] = "Histórico"
+        predicciones_df["Tipo"] = "Predicción"
+        grafico_df = pd.concat([historico_df, predicciones_df.rename(columns={"Predicción": "Cantidad de Artículos"})])
 
-        # Error del modelo Red Neuronal
-        errores_nn = mean_squared_error(y_test, modelo_nn.predict(X_test))
-        st.write(f"Error cuadrático medio Red Neuronal (MSE): {errores_nn:.4f}")
+        fig = px.bar(
+            grafico_df,
+            x="Año",
+            y="Cantidad de Artículos",
+            color="Tipo",
+            title="Publicaciones Históricas, Predicciones y Tendencia",
+            barmode="group"
+        )
+        fig.add_scatter(x=predicciones_df["Año"], y=predicciones_df["Predicción"], mode="lines+markers", name="Tendencia")
+        st.plotly_chart(fig)
 
-        # Visualización de Red Neuronal
-        st.subheader("Arquitectura de la Red Neuronal")
+        # Visualización de red neuronal
+        st.subheader("Red Neuronal - Arquitectura")
         nn_graph = Digraph(format="png")
         nn_graph.attr(rankdir="LR")
 
@@ -157,8 +162,9 @@ if not data.empty:
 
         st.graphviz_chart(nn_graph)
 
-    except Exception as e:
-        st.error(f"Error en el modelo Red Neuronal: {e}")
+        # Error del modelo
+        errores = mean_squared_error(y_test, modelo_nn.predict(X_test))
+        st.write(f"Error cuadrático medio (MSE): {errores:.4f}")
 
 # Random Forest
 st.header("Predicción con Random Forest")
