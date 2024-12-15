@@ -36,11 +36,58 @@ def get_table_data(table_name):
         st.warning(f"La tabla {table_name} está vacía.")
         return pd.DataFrame()
 
-# Obtener datos
+# CRUD
+st.sidebar.title("CRUD")
+selected_table = st.sidebar.selectbox("Selecciona una tabla", ["articulo", "estudiante", "institucion", "indizacion"])
+crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
+
+data = get_table_data(selected_table)
+fields = list(data.columns) if not data.empty else []
+
+def insert_row(table_name, fields):
+    data = {field: st.sidebar.text_input(f"Ingresar {field}") for field in fields if field != "id"}
+    if st.sidebar.button("Insertar"):
+        try:
+            supabase.table(table_name).insert([data]).execute()
+            st.success("Registro insertado correctamente")
+        except Exception as e:
+            st.error(f"Error al insertar datos: {e}")
+
+def update_row(table_name, fields):
+    record_id = st.sidebar.number_input("ID del registro a actualizar", min_value=1, step=1)
+    data = {field: st.sidebar.text_input(f"Nuevo valor para {field}") for field in fields if field != "id"}
+    if st.sidebar.button("Actualizar"):
+        try:
+            supabase.table(table_name).update(data).eq("id", record_id).execute()
+            st.success("Registro actualizado correctamente")
+        except Exception as e:
+            st.error(f"Error al actualizar datos: {e}")
+
+def delete_row(table_name):
+    record_id = st.sidebar.number_input("ID del registro a eliminar", min_value=1, step=1)
+    if st.sidebar.button("Eliminar"):
+        try:
+            supabase.table(table_name).delete().eq("id", record_id).execute()
+            st.success("Registro eliminado correctamente")
+        except Exception as e:
+            st.error(f"Error al eliminar datos: {e}")
+
+if crud_action == "Crear":
+    insert_row(selected_table, fields)
+elif crud_action == "Actualizar":
+    update_row(selected_table, fields)
+elif crud_action == "Eliminar":
+    delete_row(selected_table, fields)
+
+st.write(f"Datos actuales en la tabla {selected_table}:")
+st.dataframe(data)
+
+# Red Neuronal
+st.header("Predicción con Red Neuronal")
 data = get_table_data("articulo")
 if not data.empty:
     try:
-        # Preprocesamiento de datos
+        # Preprocesamiento de datos para Red Neuronal
         data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
         datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
         X = datos_modelo[['anio_publicacion']]
@@ -79,39 +126,15 @@ if not data.empty:
         st.write("Tabla de predicciones Red Neuronal:")
         st.dataframe(predicciones_nn_df)
 
+        # Gráfico de predicciones Red Neuronal
+        fig_nn = px.line(predicciones_nn_df, x="Año", y="Predicción_NN",
+                         title="Predicciones Red Neuronal",
+                         labels={"Predicción_NN": "Cantidad de Artículos"})
+        st.plotly_chart(fig_nn)
+
         # Error del modelo Red Neuronal
         errores_nn = mean_squared_error(y_test, modelo_nn.predict(X_test))
         st.write(f"Error cuadrático medio Red Neuronal (MSE): {errores_nn:.4f}")
-
-        # Modelo Random Forest
-        modelo_rf = RandomForestRegressor(n_estimators=100, random_state=42)
-        modelo_rf.fit(X_train, y_train.ravel())
-
-        # Predicción con Random Forest
-        predicciones_rf_normalizadas = modelo_rf.predict(años_normalizados)
-        predicciones_rf = scaler_y.inverse_transform(predicciones_rf_normalizadas.reshape(-1, 1))
-
-        predicciones_rf_df = pd.DataFrame({
-            "Año": años_prediccion,
-            "Predicción_RF": predicciones_rf.flatten()
-        })
-
-        st.write("Tabla de predicciones Random Forest:")
-        st.dataframe(predicciones_rf_df)
-
-        # Error del modelo Random Forest
-        errores_rf = mean_squared_error(y_test, modelo_rf.predict(X_test))
-        st.write(f"Error cuadrático medio Random Forest (MSE): {errores_rf:.4f}")
-
-        # Comparación de modelos
-        comparacion_df = pd.merge(predicciones_rf_df, predicciones_nn_df, on="Año")
-        comparacion_df = comparacion_df.rename(columns={"Predicción_RF": "Random Forest", "Predicción_NN": "Red Neuronal"})
-
-        fig_comparacion = px.line(comparacion_df, x="Año", y=["Random Forest", "Red Neuronal"],
-                                  title="Comparación de Modelos Predictivos",
-                                  labels={"value": "Cantidad de Artículos", "variable": "Modelo"})
-
-        st.plotly_chart(fig_comparacion)
 
         # Visualización de Red Neuronal
         st.subheader("Arquitectura de la Red Neuronal")
@@ -135,4 +158,37 @@ if not data.empty:
         st.graphviz_chart(nn_graph)
 
     except Exception as e:
-        st.error(f"Error en el modelo: {e}")
+        st.error(f"Error en el modelo Red Neuronal: {e}")
+
+# Random Forest
+st.header("Predicción con Random Forest")
+if not data.empty:
+    try:
+        # Modelo Random Forest
+        modelo_rf = RandomForestRegressor(n_estimators=100, random_state=42)
+        modelo_rf.fit(X_train, y_train.ravel())
+
+        # Predicción con Random Forest
+        predicciones_rf_normalizadas = modelo_rf.predict(años_normalizados)
+        predicciones_rf = scaler_y.inverse_transform(predicciones_rf_normalizadas.reshape(-1, 1))
+
+        predicciones_rf_df = pd.DataFrame({
+            "Año": años_prediccion,
+            "Predicción_RF": predicciones_rf.flatten()
+        })
+
+        st.write("Tabla de predicciones Random Forest:")
+        st.dataframe(predicciones_rf_df)
+
+        # Gráfico de predicciones Random Forest
+        fig_rf = px.line(predicciones_rf_df, x="Año", y="Predicción_RF",
+                         title="Predicciones Random Forest",
+                         labels={"Predicción_RF": "Cantidad de Artículos"})
+        st.plotly_chart(fig_rf)
+
+        # Error del modelo Random Forest
+        errores_rf = mean_squared_error(y_test, modelo_rf.predict(X_test))
+        st.write(f"Error cuadrático medio Random Forest (MSE): {errores_rf:.4f}")
+
+    except Exception as e:
+        st.error(f"Error en el modelo Random Forest: {e}")
