@@ -121,7 +121,7 @@ if not data.empty:
             "Año": años_prediccion,
             "Predicción": predicciones.flatten()
         })
-        st.write("Tabla de predicciones:")
+        st.write("Tabla de predicciones Red Neuronal:")
         st.dataframe(predicciones_df)
 
         # Gráfico combinado: Histórico, predicciones y tendencia
