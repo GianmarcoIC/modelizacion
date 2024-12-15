@@ -123,6 +123,7 @@ if not data.empty:
         st.write("Tabla de predicciones:")
         st.dataframe(predicciones_df)
 
+
         # Gráfico combinado: Histórico, predicciones y tendencia
         historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
         historico_df["Tipo"] = "Histórico"
