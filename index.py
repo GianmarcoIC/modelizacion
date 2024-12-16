@@ -11,6 +11,8 @@ from graphviz import Digraph
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
+import numpy as np
+import matplotlib.pyplot as plt
 
 # Configuración Supabase
 SUPABASE_URL = "https://ixgmctnuldngzludgets.supabase.co"
